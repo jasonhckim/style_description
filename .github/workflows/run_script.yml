@@ -18,12 +18,15 @@ jobs:
           python-version: '3.9'
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt  # Modify if needed
-      
-      - name: Create credentials.json
-        run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
-      
-      - name: Run the Script
-        run: python main.py  # Replace with your main script file
+        run: pip install -r requirements.txt
 
+      - name: Create Data Directory
+        run: mkdir -p data
 
+      - name: Debug OpenAI Key
+        run: echo "OpenAI Key: ${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Run Main Script
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # ✅ Pass the secret
+        run: python main.py
