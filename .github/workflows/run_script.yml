@@ -23,9 +23,6 @@ jobs:
       - name: Create Data Directory
         run: mkdir -p data
 
-      - name: Debug OpenAI Key
-        run: echo "OpenAI Key: $OPENAI_API_KEY"  # ✅ Fixed syntax
-
       - name: Run Main Script
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # ✅ Pass the secret
