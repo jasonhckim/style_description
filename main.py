@@ -61,6 +61,8 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
 
     # ✅ Try to open existing Google Sheet, otherwise create it
     try:
+        client = gspread.authorize(creds)
+        print("DEBUG: client is defined:", client)
         sheet = client.open(sheet_name)
     except gspread.exceptions.SpreadsheetNotFound:
         print(f"🛑 Google Sheet '{sheet_name}' not found. Creating a new one...")
