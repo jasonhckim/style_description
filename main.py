@@ -10,11 +10,9 @@ from googleapiclient.discovery import build
 import googleapiclient
 # ✅ Load environment variables FIRST
 from dotenv import load_dotenv
-load_dotenv()  # Loads .env before any other imports
+import os, json
 
-# Now import modules that depend on the environment variables
-from modules import ai_description
-from modules import google_drive
+load_dotenv()  # Loads .env before any other imports
 
 # ✅ Load Configuration from YAML
 with open("config.yaml", "r") as f:
@@ -24,10 +22,6 @@ with open("config.yaml", "r") as f:
 PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
-
-import os, json
-from google.oauth2.service_account import Credentials
-import gspread
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
   
@@ -41,9 +35,6 @@ def get_keywords_from_drive():
     
     return []
 
-
-
-
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     """Uploads the DataFrame to a Google Sheet named after the PDF file and ensures it is moved to the correct Google Drive folder."""
 
@@ -56,8 +47,6 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     drive_service = build("drive", "v3", credentials=creds)
-        client = gspread.authorize(creds)
-        print("DEBUG: client is defined:", client)
 
     # ✅ Try to open existing Google Sheet, otherwise create it
     try:
@@ -103,8 +92,6 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     worksheet.update(values=data, range_name="A1")
 
     print(f"✅ Data successfully uploaded to Google Sheet: {sheet.url}")
-
-
 
 def process_pdf():
     """Extracts data from the latest PDF, generates descriptions, and uploads both files to Google Sheets."""
