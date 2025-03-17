@@ -39,27 +39,32 @@ def get_keywords_from_drive():
     return []
 
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
-    """Uploads the DataFrame to a Google Sheet named after the PDF file and ensures it is moved to the correct Google Drive folder."""
-
-    # ✅ Extract the base name of the PDF file (without extension)
     sheet_name = pdf_filename.replace(".pdf", "")
 
-    # ✅ Authenticate with Google Sheets API
-    service_account_json = os.environ["GOOGLE_CREDENTIALS"]  # must exist
+    # ✅ Authenticate FIRST
+    service_account_json = os.environ["GOOGLE_CREDENTIALS"]
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-    drive_service = build("drive", "v3", credentials=creds)
-
-    # ✅ Try to open existing Google Sheet, otherwise create it
+    
+    # ✅ Initialize client OUTSIDE try block
     try:
         client = gspread.authorize(creds)
-        print("DEBUG: Authorized client:", client)
+        print("DEBUG: Client initialized:", client)
+    except Exception as e:
+        print(f"❌ FATAL: Failed to initialize Google Sheets client: {e}")
+        return  # Exit if auth fails
+
+    # ✅ Now handle sheet operations
+    try:
         sheet = client.open(sheet_name)
     except gspread.exceptions.SpreadsheetNotFound:
-        # Create new sheet code
+        print(f"🛑 Creating new sheet: {sheet_name}")
+        sheet = client.create(sheet_name)
     except gspread.exceptions.APIError as e:
-        print(f"❌ Google Sheets API Error: {e}")
+        print(f"❌ Sheets API Error: {e}")
         return
+
+    # Rest of your code (folder moving, data upload)...
         
         # ✅ Create a new Google Sheet
         sheet = client.create(sheet_name)
