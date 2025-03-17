@@ -8,6 +8,12 @@ import time
 with open("openai_prompts.yaml", "r") as f:
     prompts = yaml.safe_load(f)
 
+import os
+from openai import OpenAI
+
+# ✅ Correct initialization
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Not hardcoded!
+
 generate_description_prompt = prompts["generate_description_prompt"]
 
 def generate_description(style_number, images, keywords, max_retries=3):
