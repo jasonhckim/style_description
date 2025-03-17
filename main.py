@@ -66,9 +66,6 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
         # ✅ Create a new Google Sheet
         sheet = client.create(sheet_name)
 
-    # ✅ Ensure the Google Sheet is moved to the correct Google Drive folder
-    from googleapiclient.discovery import build
-
     drive_service = build("drive", "v3", credentials=creds)  # Ensure proper API usage
     file_id = sheet.id  # Get the newly created sheet's ID
 
