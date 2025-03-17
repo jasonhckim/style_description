@@ -23,8 +23,11 @@ PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-  
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
 def get_keywords_from_drive():
     """Fetches keywords from the latest document in Google Drive."""
     doc_file = google_drive.list_files_in_drive(DOC_FOLDER_ID, "text/plain")
@@ -42,7 +45,6 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     sheet_name = pdf_filename.replace(".pdf", "")
 
     # ✅ Authenticate with Google Sheets API
-    SCOPES = ["https://www.googleapis.com/auth/drive"]
     service_account_json = os.environ["GOOGLE_CREDENTIALS"]  # must exist
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -51,11 +53,14 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     # ✅ Try to open existing Google Sheet, otherwise create it
     try:
         client = gspread.authorize(creds)
-        print("DEBUG: client is defined:", client)
+        print("DEBUG: Authorized client:", client)
         sheet = client.open(sheet_name)
     except gspread.exceptions.SpreadsheetNotFound:
-        print(f"🛑 Google Sheet '{sheet_name}' not found. Creating a new one...")
-
+        # Create new sheet code
+    except gspread.exceptions.APIError as e:
+        print(f"❌ Google Sheets API Error: {e}")
+        return
+        
         # ✅ Create a new Google Sheet
         sheet = client.create(sheet_name)
 
