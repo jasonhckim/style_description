@@ -6,6 +6,13 @@ import yaml
 import gspread
 from google.oauth2.service_account import Credentials
 import googleapiclient
+# ✅ Load environment variables FIRST
+from dotenv import load_dotenv
+load_dotenv()  # Loads .env before any other imports
+
+# Now import modules that depend on the environment variables
+from modules import ai_description
+from modules import google_drive
 
 # ✅ Load Configuration from YAML
 with open("config.yaml", "r") as f:
@@ -29,6 +36,9 @@ def get_keywords_from_drive():
         return utils.extract_keywords_from_doc(doc_path) if doc_path else []
     
     return []
+
+
+
 
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     """Uploads the DataFrame to a Google Sheet named after the PDF file and ensures it is moved to the correct Google Drive folder."""
