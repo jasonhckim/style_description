@@ -18,11 +18,16 @@ PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
-# ✅ Set Google Cloud credentials
+import os, json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-SERVICE_ACCOUNT_FILE = "credentials.json"
-creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+service_account_json = os.environ["GOOGLE_CREDENTIALS"]  # must exist as an env variable
+info = json.loads(service_account_json)
+creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
 drive_service = build("drive", "v3", credentials=creds)
+
 
 def list_files_in_drive(folder_id, mime_type):
     """Lists the most recent file of a given type in a Google Drive folder."""
