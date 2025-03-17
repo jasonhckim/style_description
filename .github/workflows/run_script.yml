@@ -9,30 +9,26 @@ jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      # 1) Check out your code
+      # Check out your code
       - uses: actions/checkout@v3
 
-      # 2) Set up Python
+      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # 3) Create the credentials file from the GitHub secret
-      #    (replace 'GOOGLE_CREDENTIALS' with the actual name of your secret if it's different)
-      - name: Create credentials file
-        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > credentials.json
-
-      # 4) Install dependencies
+      # Install dependencies
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 5) (Optional) Create a data directory if your code expects it
+      # (Optional) Create a data directory if your code expects it
       - name: Create data directory
         run: mkdir -p data
 
-      # 6) Run the script
+      # Run the script
       - name: Run Main Script
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python main.py
