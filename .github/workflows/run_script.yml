@@ -3,33 +3,36 @@ name: Run AI Agent Daily
 on:
   schedule:
     - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:  # Allows manual triggers
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      # 1) Check out your code
+      - uses: actions/checkout@v3
 
-      - name: Set Up Python
+      # 2) Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          
-      - uses: actions/checkout@v2
+
+      # 3) Create the credentials file from the GitHub secret
+      #    (replace 'GOOGLE_CREDENTIALS' with the actual name of your secret if it's different)
       - name: Create credentials file
-        run: |
-          echo "$GOOGLE_CREDENTIALS" > credentials.json
-          
-      - name: Install Dependencies
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > credentials.json
+
+      # 4) Install dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Create Data Directory
+      # 5) (Optional) Create a data directory if your code expects it
+      - name: Create data directory
         run: mkdir -p data
 
+      # 6) Run the script
       - name: Run Main Script
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # ✅ Pass the secret
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python main.py
-
