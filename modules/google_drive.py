@@ -35,8 +35,12 @@ def list_files_in_drive(folder_id, mime_type):
 # In google_drive.py, update download_file_from_drive()
 def download_file_from_drive(file_id, filename):
     """Downloads a file from Google Drive."""
-    # ✅ Use relative path compatible with both local and GitHub Actions
-    file_path = os.path.join("data", filename)  # Changed from /mnt/data/
+    data_dir = "data"
+    # ✅ Ensure the "data" directory exists
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    
+    file_path = os.path.join(data_dir, filename)
     
     try:
         request = drive_service.files().get_media(fileId=file_id)
@@ -45,6 +49,7 @@ def download_file_from_drive(file_id, filename):
             done = False
             while not done:
                 _, done = downloader.next_chunk()
+        print(f"✅ Downloaded {filename} to: {file_path}")
         return file_path
     except Exception as e:
         print(f"❌ ERROR: Failed to download {filename}. Debug: {e}")
