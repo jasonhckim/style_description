@@ -5,6 +5,8 @@ import pandas as pd
 import yaml
 import gspread
 from google.oauth2.service_account import Credentials
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 import googleapiclient
 # ✅ Load environment variables FIRST
 from dotenv import load_dotenv
@@ -49,10 +51,11 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     sheet_name = pdf_filename.replace(".pdf", "")
 
     # ✅ Authenticate with Google Sheets API
-    service_account_json = os.environ["GOOGLE_CREDENTIALS"]
+    SCOPES = ["https://www.googleapis.com/auth/drive"]
+    service_account_json = os.environ["GOOGLE_CREDENTIALS"]  # must exist
     info = json.loads(service_account_json)
-    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    client = gspread.authorize(creds)
+    creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    drive_service = build("drive", "v3", credentials=creds)
 
     # ✅ Try to open existing Google Sheet, otherwise create it
     try:
