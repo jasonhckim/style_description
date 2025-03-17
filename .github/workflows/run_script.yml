@@ -27,3 +27,6 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # ✅ Pass the secret
         run: python main.py
+
+      - name: Debug OpenAI Key
+        run: echo "OpenAI Key: ${{ secrets.OPENAI_API_KEY }}"
