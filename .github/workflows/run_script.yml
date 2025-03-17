@@ -16,7 +16,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
+          
+      - uses: actions/checkout@v2
+      - name: Create credentials file
+        run: |
+          echo "$GOOGLE_CREDENTIALS" > credentials.json
+          
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
@@ -27,3 +32,4 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # ✅ Pass the secret
         run: python main.py
+
