@@ -23,10 +23,12 @@ PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
-# ✅ Google Sheets Credentials
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-SERVICE_ACCOUNT_FILE = "credentials.json"  # Ensure you have this in your project folder
+import os, json
+from google.oauth2.service_account import Credentials
+import gspread
 
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+  
 def get_keywords_from_drive():
     """Fetches keywords from the latest document in Google Drive."""
     doc_file = google_drive.list_files_in_drive(DOC_FOLDER_ID, "text/plain")
@@ -47,6 +49,8 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     sheet_name = pdf_filename.replace(".pdf", "")
 
     # ✅ Authenticate with Google Sheets API
+    service_account_json = os.environ["GOOGLE_CREDENTIALS"]
+    info = json.loads(service_account_json)
     creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     client = gspread.authorize(creds)
 
