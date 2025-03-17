@@ -1,20 +1,24 @@
-import openai
-import json
-import re
-import yaml
-import time
-
-# ✅ Load OpenAI prompt from YAML
-with open("openai_prompts.yaml", "r") as f:
-    prompts = yaml.safe_load(f)
-
 import os
+import json
+import time
+import re
+import yaml  # ✅ Required for loading YAML prompts
 from openai import OpenAI
 
-# ✅ Correct initialization
-client = OpenAI(api_key=os.environ.get["OPENAI_API_KEY"])
+# ✅ Load prompts from YAML file
+try:
+    with open("openai_prompts.yaml", "r") as f:
+        prompts = yaml.safe_load(f)
+    generate_description_prompt = prompts["generate_description_prompt"]
+except FileNotFoundError:
+    print("❌ ERROR: openai_prompts.yaml not found. Check the file path.")
+    exit(1)
+except KeyError:
+    print("❌ ERROR: 'generate_description_prompt' key missing in openai_prompts.yaml.")
+    exit(1)
 
-generate_description_prompt = prompts["generate_description_prompt"]
+# ✅ Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def generate_description(style_number, images, keywords, max_retries=3):
     """Generates product descriptions using OpenAI and tracks used keywords."""
@@ -35,7 +39,7 @@ def generate_description(style_number, images, keywords, max_retries=3):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
 
-            response = openai.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[{"role": "system", "content": "You are a fashion expert."},
                           {"role": "user", "content": [{"type": "text", "text": formatted_prompt}] + images}]
@@ -73,7 +77,7 @@ def generate_description(style_number, images, keywords, max_retries=3):
                 "Keywords": used_keywords_str
             }
         
-        except openai.OpenAIError as api_error:
+        except Exception as api_error:
             print(f"❌ OpenAI API Error for {style_number}: {api_error}")
             time.sleep(2)  # ✅ Small delay before retrying
         except (json.JSONDecodeError, ValueError) as e:

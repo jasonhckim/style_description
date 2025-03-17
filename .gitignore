@@ -7,3 +7,6 @@ credentials.json
 *.json
 
 export GOOGLE_APPLICATION_CREDENTIALS="your_credentials_json_as_env"
+
+# .gitignore
+.env
