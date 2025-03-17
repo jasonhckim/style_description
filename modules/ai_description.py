@@ -12,7 +12,7 @@ import os
 from openai import OpenAI
 
 # ✅ Correct initialization
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.environ.get["OPENAI_API_KEY"])
 
 generate_description_prompt = prompts["generate_description_prompt"]
 
