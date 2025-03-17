@@ -56,6 +56,7 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     drive_service = build("drive", "v3", credentials=creds)
+    client = gspread.authorize(creds)
 
     # ✅ Try to open existing Google Sheet, otherwise create it
     try:
