@@ -39,70 +39,47 @@ def get_keywords_from_drive():
     return []
 
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
+    """Uploads DataFrame to Google Sheet named after the PDF file."""
     sheet_name = pdf_filename.replace(".pdf", "")
 
-    # ✅ Authenticate FIRST
+    # ✅ Authenticate FIRST (with correct scopes)
     service_account_json = os.environ["GOOGLE_CREDENTIALS"]
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     
-    # ✅ Initialize client OUTSIDE try block
+    # ✅ Initialize client OUTSIDE try blocks
     try:
         client = gspread.authorize(creds)
         print("DEBUG: Client initialized:", client)
     except Exception as e:
-        print(f"❌ FATAL: Failed to initialize Google Sheets client: {e}")
-        return  # Exit if auth fails
+        print(f"❌ FATAL: Client initialization failed: {e}")
+        return
 
-    # ✅ Now handle sheet operations
+    # ✅ Handle sheet operations
     try:
         sheet = client.open(sheet_name)
+        print(f"✅ Found existing sheet: {sheet_name}")
     except gspread.exceptions.SpreadsheetNotFound:
         print(f"🛑 Creating new sheet: {sheet_name}")
         sheet = client.create(sheet_name)
-    except gspread.exceptions.APIError as e:
-        print(f"❌ Sheets API Error: {e}")
-        return
+    
+    # ✅ Move sheet to target folder
+    drive_service = build("drive", "v3", credentials=creds)
+    file_id = sheet.id
+    drive_service.files().update(
+        fileId=file_id,
+        addParents=pdf_folder_id,
+        removeParents="root",
+        fields="id, parents"
+    ).execute()
+    print(f"✅ Sheet moved to folder: {pdf_folder_id}")
 
-    # Rest of your code (folder moving, data upload)...
-        
-        # ✅ Create a new Google Sheet
-        sheet = client.create(sheet_name)
-
-    drive_service = build("drive", "v3", credentials=creds)  # Ensure proper API usage
-    file_id = sheet.id  # Get the newly created sheet's ID
-
-    # ✅ List all sheets to confirm it's created
-    file_list = drive_service.files().list(q=f"name='{sheet_name}'", fields="files(id, name, parents)").execute()
-    if file_list["files"]:
-        file_id = file_list["files"][0]["id"]  # Get the correct file ID
-        print(f"✅ Found Google Sheet: {sheet_name} (ID: {file_id})")
-
-        try:
-            drive_service.files().update(
-                fileId=file_id,
-                addParents=pdf_folder_id,  # Move to the correct folder
-                removeParents="root",  # Remove from default My Drive location
-                fields="id, parents"
-            ).execute()
-            print(f"✅ Google Sheet '{sheet_name}' moved to folder: {pdf_folder_id}")
-        except Exception as e:
-            print(f"❌ ERROR: Failed to move Google Sheet '{sheet_name}' to folder: {pdf_folder_id}. Debug: {e}")
-    else:
-        print(f"❌ ERROR: Could not find Google Sheet '{sheet_name}' in Drive.")
-
-    # ✅ Select the first worksheet (or create it)
-    worksheet = sheet.get_worksheet(0) or sheet.add_worksheet(title="Sheet1", rows="1000", cols="10")
-
-    # ✅ Convert DataFrame to list of lists for Google Sheets
+    # ✅ Update worksheet data
+    worksheet = sheet.get_worksheet(0)
     data = [df.columns.tolist()] + df.values.tolist()
-
-    # ✅ Clear and update the sheet
     worksheet.clear()
     worksheet.update(values=data, range_name="A1")
-
-    print(f"✅ Data successfully uploaded to Google Sheet: {sheet.url}")
-
+    print(f"✅ Data uploaded to: {sheet.url}")
 def process_pdf():
     """Extracts data from the latest PDF, generates descriptions, and uploads both files to Google Sheets."""
     # Initialize variables first
