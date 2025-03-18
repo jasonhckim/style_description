@@ -28,9 +28,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-print(f"DEBUG: Creds type: {type(creds)}")  # Should show <class 'google.oauth2.service_account.Credentials'>
-print(f"DEBUG: Client type: {type(client)}")  # Should show <class 'gspread.client.Client'>
-
 def get_keywords_from_drive():
     """Fetches keywords from the latest document in Google Drive."""
     doc_file = google_drive.list_files_in_drive(DOC_FOLDER_ID, "text/plain")
@@ -41,12 +38,23 @@ def get_keywords_from_drive():
     
     return []
 
+# ... (keep all your initial imports and config loading code)
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+# REMOVE THESE LINES - THEY'RE IN THE WRONG PLACE!
+# print(f"DEBUG: Creds type: {type(creds)}")  
+# print(f"DEBUG: Client type: {type(client)}")
+
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
+    """Uploads DataFrame to Google Sheet named after the PDF file."""
     sheet_name = pdf_filename.replace(".pdf", "")
     
     # ====== AUTHENTICATION ======
     try:
-        # Validate credentials FIRST
         service_account_json = os.environ["GOOGLE_CREDENTIALS"]
         info = json.loads(service_account_json)
         creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -57,7 +65,7 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
 
     # ====== CLIENT INITIALIZATION ======
     try:
-        client = gspread.authorize(creds)  # <-- THIS MUST SUCCEED
+        client = gspread.authorize(creds)
         print("✅ Sheets client initialized")
     except Exception as e:
         print(f"❌ FATAL: Client authorization failed: {e}")
@@ -65,13 +73,34 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
 
     # ====== SHEET OPERATIONS ======
     try:
-        sheet = client.open(sheet_name)  # <-- NOW SAFE TO USE CLIENT
+        sheet = client.open(sheet_name)
         print(f"✅ Found existing sheet: {sheet_name}")
     except gspread.SpreadsheetNotFound:
         print(f"🛑 Creating new sheet: {sheet_name}")
         sheet = client.create(sheet_name)
     
-    # Rest of your folder moving and data upload code...
+    # ====== MOVE TO FOLDER ======
+    try:
+        drive_service = build("drive", "v3", credentials=creds)
+        drive_service.files().update(
+            fileId=sheet.id,
+            addParents=pdf_folder_id,
+            removeParents="root",
+            fields="id, parents"
+        ).execute()
+        print(f"✅ Sheet moved to folder: {pdf_folder_id}")
+    except Exception as e:
+        print(f"❌ Failed to move sheet: {e}")
+
+    # ====== UPDATE WORKSHEET ======
+    try:
+        worksheet = sheet.get_worksheet(0) or sheet.add_worksheet(title="Sheet1", rows="1000", cols="10")
+        data = [df.columns.tolist()] + df.values.tolist()
+        worksheet.clear()
+        worksheet.update(values=data, range_name="A1")
+        print(f"✅ Data uploaded to: {sheet.url}")
+    except Exception as e:
+        print(f"❌ Failed to update worksheet: {e}")
 
 def process_pdf():
     """Extracts data from the latest PDF, generates descriptions, and uploads both files to Google Sheets."""
