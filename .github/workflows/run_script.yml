@@ -20,7 +20,9 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
       # (Optional) Create a data directory if your code expects it
       - name: Create data directory
@@ -33,6 +35,5 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           for file in *.pdf; do
-            echo "Processing $file"
+            echo "Starting AI agent run..."
             python main.py "$file"
-          done
