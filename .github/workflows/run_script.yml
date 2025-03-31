@@ -25,10 +25,14 @@ jobs:
       # (Optional) Create a data directory if your code expects it
       - name: Create data directory
         run: mkdir -p data
-
+           
       # Run the script
-      - name: Run Main Script
+      - name: Run script on all PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: python main.py
+        run: |
+          for file in *.pdf; do
+            echo "Processing $file"
+            python main.py "$file"
+          done
