@@ -18,6 +18,9 @@ generate_description_prompt: |
     - **Occasions or seasons** when it is best worn.
     - **Layering or accessorizing recommendations**.
 
+  - The **product title must be exactly 50 characters**, no more, no less.
+  - The **description must be at least 1000 characters** long, ensuring rich, vivid detail and fashion-forward storytelling.
+
   {set_text}
 
   **Respond in JSON format like this:**
