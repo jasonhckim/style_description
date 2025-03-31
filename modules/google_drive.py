@@ -16,9 +16,9 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 # ✅ Folder IDs
-PDF_FOLDER_ID = config["1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"]["pdf"]
-DOC_FOLDER_ID = config["1Ja_3axmjpBO0pTImZiGNFF4qEtgPt50z"]["doc"]
-CSV_FOLDER_ID = config["1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"]["csv"]
+PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
+DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
+CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
 # ✅ Google Drive API Scopes
 SCOPES = ["https://www.googleapis.com/auth/drive"]
