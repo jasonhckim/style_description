@@ -38,6 +38,17 @@ def list_all_files_in_drive(folder_id, mime_type):
     
     return files[0] if files else None
 
+def get_drive_service():
+    """Returns an authenticated Google Drive service using credentials."""
+    service_account_json = os.environ.get("GOOGLE_CREDENTIALS")
+    if not service_account_json:
+        raise Exception("Missing GOOGLE_CREDENTIALS environment variable")
+
+    info = json.loads(service_account_json)
+    creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    service = build("drive", "v3", credentials=creds)
+    return service
+
 # In google_drive.py, update download_file_from_drive()
 def download_file_from_drive(file_id, filename):
     """Downloads a file from Google Drive."""
