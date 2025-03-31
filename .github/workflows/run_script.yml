@@ -29,11 +29,13 @@ jobs:
         run: mkdir -p data
            
       # Run the script
-      - name: Run script on all PDFs
+      - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
+          echo "Starting AI agent run..."
           for file in *.pdf; do
-            echo "Starting AI agent run..."
+            echo "Processing $file"
             python main.py "$file"
+          done
