@@ -19,7 +19,7 @@ generate_description_prompt: |
     - **Layering or accessorizing recommendations**.
 
   - The **product title must be exactly 50 characters**, no more, no less.
-  - The **description must be at least 1000 characters** long, ensuring rich, vivid detail and fashion-forward storytelling.
+  - The **description must be less than 1000 characters** long, ensuring rich, vivid detail and fashion-forward storytelling.
 
   {set_text}
 
