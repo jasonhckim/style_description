@@ -1,69 +1,62 @@
 import os
+import json
 import yaml
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-import fitz  # PyMuPDF
-from PIL import Image
 import io
 import base64
 import re
+from PIL import Image
+import fitz  # PyMuPDF
 
-# ✅ Load Configuration from YAML
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+
+# ✅ Load config.yaml
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-# ✅ Retrieve Folder IDs from Config
-PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
-DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
-CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
+# ✅ Folder IDs
+PDF_FOLDER_ID = config["1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"]["pdf"]
+DOC_FOLDER_ID = config["1Ja_3axmjpBO0pTImZiGNFF4qEtgPt50z"]["doc"]
+CSV_FOLDER_ID = config["1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"]["csv"]
 
-import os, json
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-
+# ✅ Google Drive API Scopes
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-service_account_json = os.environ["GOOGLE_CREDENTIALS"]  # must exist as an env variable
-info = json.loads(service_account_json)
-creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-drive_service = build("drive", "v3", credentials=creds)
 
-
-def list_files_in_drive(folder_id, mime_type):
-    """Returns the first file in a Google Drive folder matching the MIME type."""
-    service = get_drive_service()
-    query = f"'{folder_id}' in parents and mimeType='{mime_type}' and trashed = false"
-    results = service.files().list(q=query, fields="files(id, name)", pageSize=1).execute()
-    files = results.get("files", [])
-    return files[0] if files else None
-
-
-    
-    return files[0] if files else None
-
+# ✅ Get Google Drive service using credentials
 def get_drive_service():
-    """Returns an authenticated Google Drive service using credentials."""
     service_account_json = os.environ.get("GOOGLE_CREDENTIALS")
     if not service_account_json:
         raise Exception("Missing GOOGLE_CREDENTIALS environment variable")
 
     info = json.loads(service_account_json)
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-    service = build("drive", "v3", credentials=creds)
-    return service
+    return build("drive", "v3", credentials=creds)
 
-# In google_drive.py, update download_file_from_drive()
+# ✅ Get the first matching file from a Drive folder
+def list_files_in_drive(folder_id, mime_type):
+    service = get_drive_service()
+    query = f"'{folder_id}' in parents and mimeType='{mime_type}' and trashed = false"
+    results = service.files().list(q=query, fields="files(id, name)", pageSize=1).execute()
+    files = results.get("files", [])
+    return files[0] if files else None
+
+# ✅ Get all matching files from a Drive folder
+def list_all_files_in_drive(folder_id, mime_type):
+    service = get_drive_service()
+    query = f"'{folder_id}' in parents and mimeType='{mime_type}' and trashed = false"
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    return results.get("files", [])
+
+# ✅ Download file from Google Drive
 def download_file_from_drive(file_id, filename):
-    """Downloads a file from Google Drive."""
     data_dir = "data"
-    # ✅ Ensure the "data" directory exists
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    
+    os.makedirs(data_dir, exist_ok=True)
     file_path = os.path.join(data_dir, filename)
-    
+
     try:
-        request = drive_service.files().get_media(fileId=file_id)
+        service = get_drive_service()
+        request = service.files().get_media(fileId=file_id)
         with open(file_path, "wb") as file:
             downloader = MediaIoBaseDownload(file, request)
             done = False
@@ -75,15 +68,15 @@ def download_file_from_drive(file_id, filename):
         print(f"❌ ERROR: Failed to download {filename}. Debug: {e}")
         return None
 
+# ✅ Upload file to Google Drive
 def upload_file_to_drive(file_path, folder_id):
-    """Uploads a file to Google Drive inside the specified folder."""
+    service = get_drive_service()
     file_metadata = {
-        "name": file_path.split("/")[-1],  # Extracts filename
+        "name": os.path.basename(file_path),
         "parents": [folder_id]
     }
     media = MediaFileUpload(file_path, resumable=True)
-
-    uploaded_file = drive_service.files().create(
+    uploaded_file = service.files().create(
         body=file_metadata,
         media_body=media,
         fields="id"
@@ -92,8 +85,8 @@ def upload_file_to_drive(file_path, folder_id):
     print(f"✅ Uploaded CSV to Google Drive: https://drive.google.com/file/d/{uploaded_file['id']}")
     return uploaded_file["id"]
 
+# ✅ Extract text and images from PDF
 def extract_text_and_images_from_pdf(pdf_path):
-    """Extracts both text and images from a PDF."""
     doc = fitz.open(pdf_path)
     extracted_data = []
     style_regex = r"\b(DZ\d{2}[A-Z]\d{3,5}(-SET|-D)?|HF\d{2}[A-Z]\d{3,5}(-SET|-D)?)\b"
@@ -103,7 +96,7 @@ def extract_text_and_images_from_pdf(pdf_path):
         text = page.get_text("text")
         images = []
 
-        for img_index, img in enumerate(page.get_images(full=True)):
+        for _, img in enumerate(page.get_images(full=True)):
             xref = img[0]
             base_image = doc.extract_image(xref)
             image_bytes = base_image["image"]
