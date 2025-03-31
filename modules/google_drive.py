@@ -29,11 +29,14 @@ creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPE
 drive_service = build("drive", "v3", credentials=creds)
 
 
-def list_all_files_in_drive(folder_id, mime_type):
+def list_files_in_drive(folder_id, mime_type):
+    """Returns the first file in a Google Drive folder matching the MIME type."""
     service = get_drive_service()
     query = f"'{folder_id}' in parents and mimeType='{mime_type}' and trashed = false"
-    results = service.files().list(q=query, fields="files(id, name)").execute()
-    return results.get("files", [])
+    results = service.files().list(q=query, fields="files(id, name)", pageSize=1).execute()
+    files = results.get("files", [])
+    return files[0] if files else None
+
 
     
     return files[0] if files else None
