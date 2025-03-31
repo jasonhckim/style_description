@@ -29,11 +29,12 @@ creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPE
 drive_service = build("drive", "v3", credentials=creds)
 
 
-def list_files_in_drive(folder_id, mime_type):
-    """Lists the most recent file of a given type in a Google Drive folder."""
-    query = f"'{folder_id}' in parents and mimeType='{mime_type}'"
-    results = drive_service.files().list(q=query, orderBy="createdTime desc", fields="files(id, name)").execute()
-    files = results.get("files", [])
+def list_all_files_in_drive(folder_id, mime_type):
+    service = get_drive_service()
+    query = f"'{folder_id}' in parents and mimeType='{mime_type}' and trashed = false"
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    return results.get("files", [])
+
     
     return files[0] if files else None
 
