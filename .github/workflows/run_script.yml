@@ -9,22 +9,21 @@ jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      # ✅ Check out your code
       - uses: actions/checkout@v3
 
-      # ✅ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # ✅ Clean + reinstall dependencies, force OpenAI version
-      - name: Remove any cached OpenAI
-        run: pip uninstall -y openai
-
-      - name: Install all requirements
+      - name: Clean pip cache and uninstall OpenAI
         run: |
-          pip install -r requirements.txt || true  # ignore errors due to OpenAI version
+          pip uninstall -y openai
+          pip cache purge
+
+      - name: Install all requirements (excluding openai)
+        run: |
+          pip install -r requirements.txt --no-deps || true
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
       - name: Reinstall correct OpenAI version last
@@ -33,11 +32,9 @@ jobs:
       - name: Check OpenAI version (must be 1.13.3)
         run: pip show openai
 
-      # ✅ Create data directory
       - name: Create data directory
         run: mkdir -p data
 
-      # ✅ Run main.py
       - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -49,7 +46,6 @@ jobs:
             python main.py "$file"
           done
 
-      # ✅ Run QA Agent
       - name: Run QA Agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
