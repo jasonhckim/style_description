@@ -3,49 +3,39 @@ name: Run AI Agent Daily
 on:
   schedule:
     - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual triggers
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
+      # Check out your code
       - uses: actions/checkout@v3
 
+      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Clean pip and remove corrupted OpenAI SDK
-        run: |
-          pip uninstall -y openai clip httpx urllib3 || true
-          pip cache purge
-          rm -rf ~/.cache/pip
-          rm -rf /opt/hostedtoolcache/Python/3.9.22/x64/lib/python3.9/site-packages/openai*
-
-      - name: Install base dependencies
+      # Install dependencies
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
-      - name: Reinstall correct HTTPX version (required by OpenAI SDK)
-        run: pip install --force-reinstall "httpx>=0.27.0,<0.28.0"
-
-      - name: Install correct OpenAI SDK (must be after httpx)
-        run: pip install --force-reinstall openai==1.13.3
-
-      - name: Confirm OpenAI + httpx versions
-        run: |
-          python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
-          python -c "import httpx; print('✅ HTTPX version:', httpx.__version__)"
-
+      # (Optional) Create a data directory if your code expects it
       - name: Create data directory
         run: mkdir -p data
-
-      - name: Run main.py (fetches and processes PDFs from Drive)
+           
+      # Run the script
+      - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           echo "Starting AI agent run..."
-          python main.py
+          for file in *.pdf; do
+            echo "Processing $file"
+            python main.py "$file"
+          done
