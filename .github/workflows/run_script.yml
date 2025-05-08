@@ -48,4 +48,4 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "Running QA optimization agent..."
-          python qa_agent.py
+          python QA_Agent.yaml
