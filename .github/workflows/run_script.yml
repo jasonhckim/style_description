@@ -3,40 +3,37 @@ name: Run AI Agent Daily
 on:
   schedule:
     - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual triggers
-
-
+  workflow_dispatch:
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      # Check out your code
+      # ✅ Check out your code
       - uses: actions/checkout@v3
 
-      # Set up Python
+      # ✅ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Remove old OpenAI SDK if cached
-        run: pip uninstall -y openai
-      
-      - name: Force-install correct version
-        run: pip install openai==1.13.3
-      
-      # Install dependencies
+      # ✅ Install all dependencies in one place, force OpenAI version last
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+          pip install --force-reinstall openai==1.13.3
 
-      # (Optional) Create a data directory if your code expects it
+      # ✅ Debug OpenAI version
+      - name: Check OpenAI SDK version
+        run: pip show openai
+
+      # ✅ Create data directory
       - name: Create data directory
         run: mkdir -p data
-           
-      # Run the script
+
+      # ✅ Run main.py
       - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -48,10 +45,10 @@ jobs:
             python main.py "$file"
           done
 
-      # Run the QA Agent script
+      # ✅ Run QA Agent
       - name: Run QA Agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "Running QA optimization agent..."
-          python qa_agent.py  # This script runs your QA logic
+          python qa_agent.py
