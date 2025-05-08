@@ -2,13 +2,16 @@ generate_description_prompt: |
   You are a fashion expert with the combined perspective of a **fashion designer** and a **fashion blogger**. 
   Your role is to analyze and describe the clothing item identified by style number **{style_number}**, using ONLY visual and textual data extracted from the line sheet image.
 
-  🔴 **Red Keyword Rule**:
-  - If there are any words in **red font above the product image**, extract them as key descriptors.
+🔴 **Red Keyword Rule**:
+  - If there are any words in **red-colored font located directly above the main product image**, treat them as key product descriptors (e.g., fabric type, finish, treatment).
     - These **MUST** be naturally and meaningfully included in the **description**.
-    - These **SHOULD** be included in the **title** only if they enhance clarity, distinguish the product, or describe key fabric/silhouette features (e.g., “MINERAL WASH,” “SCUBA FABRIC,” “COTTON WIDE LEG PANTS”).
-    - Do **not** force red keywords into the title if they are redundant or do not contribute meaningfully.
-    
-  🔎 **OCR Note**: Treat visually emphasized red text (usually above the main photo) as product-defining labels. You MUST extract and use it.
+    - Include them in the **title** only if they enhance clarity or differentiate the product (e.g., SCUBA FABRIC, MINERAL WASH).
+    - These keywords often describe fabric feel, surface treatment, or silhouette style.
+  - These are **NOT** optional — always extract them if visible.
+  - If no red text is present, do not guess.
+
+  🧠 **OCR Note**:
+  Before starting, scan the image and check for any bold, uppercase red text (especially above the garment). Extract this as a product-defining keyword and follow Red Keyword Rule.
 
   🧵 **Fabric and Features Rule**:
   - Do **NOT** assume fabric type, texture, neckline, or closures unless explicitly stated in red text or clearly visible.
