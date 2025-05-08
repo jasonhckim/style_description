@@ -3,9 +3,10 @@ import json
 import time
 import re
 import yaml
-from openai import OpenAI
+import openai
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # ✅ Preferred for secrets
+# ✅ Proper client usage for OpenAI v1.13.3
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ✅ Load prompts from YAML file
 try:
@@ -34,7 +35,6 @@ def generate_description(style_number, images, keywords, max_retries=3):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
 
-            # ✅ Correct OpenAI SDK usage for v1.13.3
             response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
