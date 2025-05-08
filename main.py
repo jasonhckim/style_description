@@ -104,12 +104,10 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
 
 def process_pdf():
     """Extracts data from the latest PDF, generates descriptions, and uploads both files to Google Sheets."""
-    # Initialize variables first
     extracted_data = []
     processed_data = []
     
     pdf_files = google_drive.list_all_files_in_drive(PDF_FOLDER_ID, "application/pdf")
-
     if not pdf_files:
         print("❌ No PDFs found in Google Drive folder")
         return
@@ -121,8 +119,7 @@ def process_pdf():
         if not pdf_path:
             print(f"❌ Failed to download {pdf_filename}")
             continue
-    
-        # Extract, process, and upload same as before
+
         extracted_data = google_drive.extract_text_and_images_from_pdf(pdf_path)
         keywords = get_keywords_from_drive()
     
@@ -145,56 +142,29 @@ def process_pdf():
         if missing_columns:
             print(f"❌ Missing columns in DataFrame from {pdf_filename}: {missing_columns}")
             continue
-    
-        df = df[expected_columns]
+
+        # Add character count columns
+        df["Product Name Character Count"] = df["Product Title"].apply(lambda x: len(x) if pd.notnull(x) else 0)
+        df["Description Character Count"] = df["Product Description"].apply(lambda x: len(x) if pd.notnull(x) else 0)
+
+        # Reorder columns to match final structure
+        column_order = [
+            "Style Number", 
+            "Product Name Character Count", 
+            "Product Title", 
+            "Description Character Count", 
+            "Product Description", 
+            "Tags", 
+            "Product Category", 
+            "Product Type", 
+            "Option2 Value", 
+            "Keywords"
+        ]
+        df = df[column_order]
     
         upload_to_google_sheets(df, pdf_filename, PDF_FOLDER_ID)
         print(f"✅ Finished processing {pdf_filename}")
 
-
-    if pdf_file:
-        pdf_filename = pdf_file["name"]  # Get the actual name of the PDF
-        pdf_path = google_drive.download_file_from_drive(pdf_file["id"], pdf_filename)
-        
-        if pdf_path:  # Check if download succeeded
-            extracted_data = google_drive.extract_text_and_images_from_pdf(pdf_path)
-        else:
-            print("❌ Failed to download PDF file")
-            return
-
-        # ✅ Fetch Keywords from Drive
-        keywords = get_keywords_from_drive()
-
-        # ✅ Generate descriptions (AFTER extracted_data is populated)
-        processed_data = [
-            ai_description.generate_description(entry["style_number"], entry["images"], keywords) 
-            for entry in extracted_data
-        ]
-
-        # ✅ Debug: Print the structure of the first item
-        if processed_data:
-            print("Sample processed entry:", processed_data[0])
-
-        # ✅ Convert to DataFrame
-        df = pd.DataFrame(processed_data)
-
-        # ✅ Ensure proper column order
-        expected_columns = [
-            "Style Number", "Product Title", "Product Description", "Tags", 
-            "Product Category", "Product Type", "Option2 Value", "Keywords"
-        ]
-        
-        # Add column validation
-        missing_columns = [col for col in expected_columns if col not in df.columns]
-        if missing_columns:
-            print(f"❌ Missing columns in DataFrame: {missing_columns}")
-            return
-
-        df = df[expected_columns]
-
-        # ✅ Upload the data to a Google Sheet
-        upload_to_google_sheets(df, pdf_filename, PDF_FOLDER_ID)
-        print(f"✅ Process completed. Files in folder: {PDF_FOLDER_ID}")
     else:
         print("❌ No PDF found in Google Drive folder")
 
