@@ -38,13 +38,11 @@ jobs:
       - name: Create data directory
         run: mkdir -p data
 
-      - name: Run main.py on all local PDFs
+      - name: Run main.py (fetches and processes PDFs from Drive)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           echo "Starting AI agent run..."
-          for file in *.pdf; do
-            echo "Processing $file"
-            python main.py "$file"
+          python main.py
           done
