@@ -3,7 +3,8 @@ import json
 import time
 import re
 import yaml  # ✅ Required for loading YAML prompts
-from openai import OpenAI
+import openai
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ✅ Load prompts from YAML file
 try:
@@ -16,9 +17,6 @@ except FileNotFoundError:
 except KeyError:
     print("❌ ERROR: 'generate_description_prompt' key missing in openai_prompts.yaml.")
     exit(1)
-
-# ✅ Initialize OpenAI client
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def generate_description(style_number, images, keywords, max_retries=3):
     """Generates product descriptions using OpenAI and tracks used keywords."""
@@ -39,7 +37,7 @@ def generate_description(style_number, images, keywords, max_retries=3):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
 
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-4-turbo",
                 messages=[
                     {"role": "system", "content": "You are a fashion expert."},
