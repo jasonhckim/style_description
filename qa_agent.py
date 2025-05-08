@@ -1,7 +1,10 @@
+import openai
 from openai import OpenAI
 import os
 import json
 
+print("🧠 OpenAI SDK version:", openai.__version__)
+print("🧠 OpenAI SDK file path:", openai.__file__)
 # Set up the OpenAI client using your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
