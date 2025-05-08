@@ -3,8 +3,10 @@ import json
 import time
 import re
 import yaml  # ✅ Required for loading YAML prompts
-import openai
-openai.api_key = os.getenv("OPENAI_API_KEY")
+from openai import OpenAI
+
+# ✅ Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ✅ Load prompts from YAML file
 try:
@@ -22,47 +24,42 @@ def generate_description(style_number, images, keywords, max_retries=3):
     """Generates product descriptions using OpenAI and tracks used keywords."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
-
     keyword_list = ", ".join(keywords[:3])  # Use up to 3 keywords
 
-    # ✅ Strengthen the instruction for keyword usage
     formatted_prompt = generate_description_prompt.format(
         style_number=style_number,
         keywords=keyword_list,
         set_text=set_text
     ) + f"\n\nEnsure that the following keywords are seamlessly included in the description: {keyword_list}. If necessary, rephrase the description naturally to integrate these keywords."
 
-
     for attempt in range(max_retries):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
                     {"role": "system", "content": "You are a fashion expert."},
                     {"role": "user", "content": formatted_prompt}
-]
+                ],
+                temperature=0.7,
+                max_tokens=500,
             )
 
-            # ✅ Print OpenAI response
             raw_text = response.choices[0].message.content.strip()
-            print(f"\n🔍 DEBUG: OpenAI Response for {style_number}: {response}")
+            print(f"\n🔍 DEBUG: OpenAI Response for {style_number}: {raw_text}")
 
-            # ✅ Remove Markdown-style code blocks (```json ... ```)
             if raw_text.startswith("```json"):
-                raw_text = raw_text[7:-3].strip()  # Remove ```json at start and ``` at end
-                
+                raw_text = raw_text[7:-3].strip()
+
             parsed_data = json.loads(raw_text)
 
-            # ✅ Clean fields to prevent formatting issues
             description = parsed_data.get("description", "").replace("\n", " ").strip()
             product_title = parsed_data.get("product_title", "").replace("\n", " ").strip()
             product_category = parsed_data.get("product_category", "N/A").strip()
             product_type = "Set" if is_set else parsed_data.get("product_type", "N/A").strip()
             key_attribute = parsed_data.get("key_attribute", "N/A").strip()
 
-            # ✅ Identify which keywords were actually used
             used_keywords = [kw for kw in keywords if re.search(rf'\b{re.escape(kw)}\b', description, re.IGNORECASE)]
             used_keywords_str = ", ".join(used_keywords) if used_keywords else ""
 
@@ -76,15 +73,14 @@ def generate_description(style_number, images, keywords, max_retries=3):
                 "Option2 Value": key_attribute,
                 "Keywords": used_keywords_str
             }
-        
+
         except Exception as api_error:
             print(f"❌ OpenAI API Error for {style_number}: {api_error}")
-            time.sleep(2)  # ✅ Small delay before retrying
+            time.sleep(2)
         except (json.JSONDecodeError, ValueError) as e:
             print(f"❌ ERROR: Failed to parse JSON for {style_number}. Attempt {attempt + 1} of {max_retries}. Debug: {e}")
-            time.sleep(2)  # ✅ Small delay before retrying
+            time.sleep(2)
 
-    # ✅ Return a fallback response after all retries fail
     print(f"❌ ERROR: All {max_retries} attempts failed for {style_number}. Skipping.")
     return {
         "Style Number": style_number,
