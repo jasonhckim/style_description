@@ -16,23 +16,24 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Start from a clean environment
+      - name: Clean pip and remove corrupted OpenAI SDK
         run: |
-          pip uninstall -y openai || true
-          pip uninstall -y clip || true
+          pip uninstall -y openai clip httpx urllib3 || true
           pip cache purge
           rm -rf ~/.cache/pip
+          rm -rf /opt/hostedtoolcache/Python/3.9.22/x64/lib/python3.9/site-packages/openai*
 
-      - name: Install all requirements (excluding openai)
+      - name: Install all other requirements
         run: |
-          pip install -r requirements.txt --no-deps || true
+          pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
-      - name: Reinstall correct OpenAI version last
+      - name: Install correct OpenAI SDK (last to avoid override)
         run: pip install --force-reinstall openai==1.13.3
 
-      - name: Check OpenAI version (must be 1.13.3)
-        run: pip show openai
+      - name: Confirm OpenAI version
+        run: |
+          python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
 
       - name: Create data directory
         run: mkdir -p data
@@ -47,9 +48,3 @@ jobs:
             echo "Processing $file"
             python main.py "$file"
           done
-
-      - name: Confirm OpenAI SDK runtime details
-        run: |
-          python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
-
-    
