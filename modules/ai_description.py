@@ -6,7 +6,7 @@ import yaml
 from openai import OpenAI
 
 # ✅ Instantiate the client properly
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI()
 
 # ✅ Load prompts from YAML file
 try:
