@@ -130,6 +130,14 @@ def process_pdf():
         df["Product Name Character Count"] = df["Product Title"].apply(lambda x: len(x) if pd.notnull(x) else 0)
         df["Description Character Count"] = df["Product Description"].apply(lambda x: len(x) if pd.notnull(x) else 0)
 
+        # Ensure editable columns exist
+        if "Edit Product Title" not in df.columns:
+            df["Edit Product Title"] = ""
+        
+        if "Edit Product Description" not in df.columns:
+            df["Edit Product Description"] = ""
+
+        
         # Reorder columns
         column_order = [
             "Style Number", 
