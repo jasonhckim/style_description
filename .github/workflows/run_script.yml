@@ -8,29 +8,27 @@ on:
 jobs:
   run-agent:
     runs-on: ubuntu-latest
-
     steps:
-      # ✅ Check out your repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # Check out your code
+      - uses: actions/checkout@v3
 
-      # ✅ Set up Python
+      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # ✅ Install dependencies
+      # Install dependencies
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
-      # ✅ (Optional) Create data directory
+      # (Optional) Create a data directory if your code expects it
       - name: Create data directory
         run: mkdir -p data
-
-      # ✅ Run Description Generator
+           
+      # Run the script
       - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -42,10 +40,10 @@ jobs:
             python main.py "$file"
           done
 
-      # ✅ Run the QA Agent script
+      # Run the QA Agent script
       - name: Run QA Agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "Running QA optimization agent..."
-          python qa_agent.py
+          python qa_agent.py  # This script runs your QA logic
