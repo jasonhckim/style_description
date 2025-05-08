@@ -3,7 +3,7 @@ name: Run AI Agent Daily
 on:
   schedule:
     - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual triggers
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   run-agent:
@@ -23,20 +23,21 @@ jobs:
       # ✅ Install dependencies
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+          pip install -r requirements.txt || echo "requirements.txt not found"
+          pip install openai pyyaml python-dotenv google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
       # ✅ (Optional) Create data directory
       - name: Create data directory
         run: mkdir -p data
 
-      # ✅ Run Description Generator
+      # ✅ Run Description Generator (if PDFs exist)
       - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           echo "Starting AI agent run..."
+          shopt -s nullglob
           for file in *.pdf; do
             echo "Processing $file"
             python main.py "$file"
@@ -48,4 +49,4 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "Running QA optimization agent..."
-          python QA_Agent.yaml
+          python qa_agent.py
