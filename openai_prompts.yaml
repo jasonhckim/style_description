@@ -4,10 +4,12 @@ generate_description_prompt: |
 
   - If the style number contains 'SET', it is a **coordinated clothing set** (e.g., top & bottom, dress & cardigan). 
   - If the there is no 'SET', you still need to categorize them. Category name should always be filled.
+  - If there are words in RED font, these are either descriptive text or additional information you MUST add in the description & if allowed please add to the title.
   - If the style has prints, make sure you describe the prints (e.g., gingham, checkered, leopard).
   - Ensure the **title and description clearly highlight that it is a set**, if applicable.
   - Provide a **detailed yet engaging** description that captures the **silhouette, fit, structure, print pattern, and key design elements**.
-  - Do **NOT** assume materials or closures unless they are **clearly visible**.
+  - Do **NOT** assume fabric type or closures.
+  - Do **NOT** use the words chic or elegance too much.
   - Do **NOT** mention **colors** anywhere (title, description, hashtags, attributes).
   - **Seamlessly integrate** these keywords into the description: **{keywords}**.
     - The keywords should flow naturally in the text and not appear as a forced list.
@@ -17,9 +19,11 @@ generate_description_prompt: |
     - **How to wear the piece** and what styles it complements.
     - **Occasions or seasons** when it is best worn.
     - **Layering or accessorizing recommendations**.
+    - **While writing I want you to review the previous descriptions written and not offer the same items**
+    
 
-  - The **product title must be exactly 50 characters**, no more, no less.
-  - The **description must be less than 400 characters** long, ensuring rich, vivid detail and fashion-forward storytelling.
+  - The **product title must be exactly 40 characters**, no more, no less.
+  - The **description must be less than 350 characters** long, ensuring rich, vivid detail and fashion-forward storytelling.
 
   {set_text}
 
