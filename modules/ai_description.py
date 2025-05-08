@@ -5,7 +5,7 @@ import re
 import yaml
 from openai import OpenAI
 
-client = OpenAI(api_key="your-key-here")  # ✅ REQUIRED unless using global config
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # ✅ Preferred for secrets
 
 # ✅ Load prompts from YAML file
 try:
