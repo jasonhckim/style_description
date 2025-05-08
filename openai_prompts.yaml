@@ -7,6 +7,8 @@ generate_description_prompt: |
     - These **MUST** be naturally and meaningfully included in the **description**.
     - These **SHOULD** be included in the **title** only if they enhance clarity, distinguish the product, or describe key fabric/silhouette features (e.g., “MINERAL WASH,” “SCUBA FABRIC,” “COTTON WIDE LEG PANTS”).
     - Do **not** force red keywords into the title if they are redundant or do not contribute meaningfully.
+    
+  🔎 **OCR Note**: Treat visually emphasized red text (usually above the main photo) as product-defining labels. You MUST extract and use it.
 
   🧵 **Fabric and Features Rule**:
   - Do **NOT** assume fabric type, texture, neckline, or closures unless explicitly stated in red text or clearly visible.
