@@ -1,0 +1,30 @@
+name: Weekly Fine-Tune from Edits
+
+on:
+  schedule:
+    - cron: "2 2 * * 6"  # Every Friday at 6:02 PM PST (2:02 AM UTC Sat)
+  workflow_dispatch:
+
+jobs:
+  finetune-builder:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib openai pandas
+
+      - name: Run fine-tune training script
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          python train_finetune_data.py
