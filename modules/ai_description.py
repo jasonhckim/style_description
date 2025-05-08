@@ -5,8 +5,7 @@ import re
 import yaml
 from openai import OpenAI
 
-# ✅ Instantiate the client properly
-client = OpenAI()
+client = OpenAI(api_key="your-key-here")  # ✅ REQUIRED unless using global config
 
 # ✅ Load prompts from YAML file
 try:
