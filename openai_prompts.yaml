@@ -4,7 +4,8 @@ generate_description_prompt: |
 
   - If the style number contains 'SET', it is a **coordinated clothing set** (e.g., top & bottom, dress & cardigan). 
   - If the there is no 'SET', you still need to categorize them. Category name should always be filled.
-  - If there are words in RED font, these are either descriptive text or additional information you MUST add in the description & if allowed please add to the title.
+  - If there are any words in red font above the image, extract them and interpret them as keywords or descriptors. These must be included in the product description, and if appropriate, also in the title.
+  - Prioritize clarity and accuracy. If the red text refers to a wash, dye, or fabric treatment (e.g. “MINERAL WASH”), incorporate it into the title only if it enhances the meaning or distinguishes the item.
   - If the style has prints, make sure you describe the prints (e.g., gingham, checkered, leopard).
   - Ensure the **title and description clearly highlight that it is a set**, if applicable.
   - Provide a **detailed yet engaging** description that captures the **silhouette, fit, structure, print pattern, and key design elements**.
