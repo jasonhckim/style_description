@@ -16,10 +16,12 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Clean pip cache and uninstall OpenAI
+      - name: Start from a clean environment
         run: |
-          pip uninstall -y openai
+          pip uninstall -y openai || true
+          pip uninstall -y clip || true
           pip cache purge
+          rm -rf ~/.cache/pip
 
       - name: Install all requirements (excluding openai)
         run: |
@@ -45,6 +47,10 @@ jobs:
             echo "Processing $file"
             python main.py "$file"
           done
+
+      - name: Confirm OpenAI SDK runtime details
+        run: |
+          python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
 
       - name: Run QA Agent
         env:
