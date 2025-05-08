@@ -2,10 +2,10 @@ import os
 import json
 import time
 import re
-import yaml  # ✅ Required for loading YAML prompts
+import yaml
 from openai import OpenAI
 
-# ✅ Initialize OpenAI client
+# ✅ Instantiate the client properly
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ✅ Load prompts from YAML file
@@ -21,10 +21,9 @@ except KeyError:
     exit(1)
 
 def generate_description(style_number, images, keywords, max_retries=3):
-    """Generates product descriptions using OpenAI and tracks used keywords."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
-    keyword_list = ", ".join(keywords[:3])  # Use up to 3 keywords
+    keyword_list = ", ".join(keywords[:3])
 
     formatted_prompt = generate_description_prompt.format(
         style_number=style_number,
@@ -36,22 +35,18 @@ def generate_description(style_number, images, keywords, max_retries=3):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
 
+            # ✅ Correct OpenAI SDK usage for v1.13.3
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4",
                 messages=[
                     {"role": "system", "content": "You are a fashion expert."},
                     {"role": "user", "content": formatted_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500,
+                ]
             )
 
             raw_text = response.choices[0].message.content.strip()
-            print(f"\n🔍 DEBUG: OpenAI Response for {style_number}: {raw_text}")
-
             if raw_text.startswith("```json"):
                 raw_text = raw_text[7:-3].strip()
-
             parsed_data = json.loads(raw_text)
 
             description = parsed_data.get("description", "").replace("\n", " ").strip()
@@ -61,7 +56,7 @@ def generate_description(style_number, images, keywords, max_retries=3):
             key_attribute = parsed_data.get("key_attribute", "N/A").strip()
 
             used_keywords = [kw for kw in keywords if re.search(rf'\b{re.escape(kw)}\b', description, re.IGNORECASE)]
-            used_keywords_str = ", ".join(used_keywords) if used_keywords else ""
+            used_keywords_str = ", ".join(used_keywords)
 
             return {
                 "Style Number": style_number,
@@ -74,11 +69,8 @@ def generate_description(style_number, images, keywords, max_retries=3):
                 "Keywords": used_keywords_str
             }
 
-        except Exception as api_error:
-            print(f"❌ OpenAI API Error for {style_number}: {api_error}")
-            time.sleep(2)
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ ERROR: Failed to parse JSON for {style_number}. Attempt {attempt + 1} of {max_retries}. Debug: {e}")
+        except Exception as e:
+            print(f"❌ OpenAI API Error for {style_number}: {e}")
             time.sleep(2)
 
     print(f"❌ ERROR: All {max_retries} attempts failed for {style_number}. Skipping.")
