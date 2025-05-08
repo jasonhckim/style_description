@@ -45,4 +45,3 @@ jobs:
         run: |
           echo "Starting AI agent run..."
           python main.py
-          done
