@@ -52,9 +52,4 @@ jobs:
         run: |
           python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
 
-      - name: Run QA Agent
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          echo "Running QA optimization agent..."
-          python qa_agent.py
+    
