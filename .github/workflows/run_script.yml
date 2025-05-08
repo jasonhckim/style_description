@@ -18,15 +18,19 @@ jobs:
         with:
           python-version: '3.9'
 
-      # ✅ Install all dependencies in one place, force OpenAI version last
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
-          pip install --force-reinstall openai==1.13.3
+      # ✅ Clean + reinstall dependencies, force OpenAI version
+      - name: Remove any cached OpenAI
+        run: pip uninstall -y openai
 
-      # ✅ Debug OpenAI version
-      - name: Check OpenAI SDK version
+      - name: Install all requirements
+        run: |
+          pip install -r requirements.txt || true  # ignore errors due to OpenAI version
+          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+
+      - name: Reinstall correct OpenAI version last
+        run: pip install --force-reinstall openai==1.13.3
+
+      - name: Check OpenAI version (must be 1.13.3)
         run: pip show openai
 
       # ✅ Create data directory
