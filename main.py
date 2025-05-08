@@ -134,9 +134,11 @@ def process_pdf():
         column_order = [
             "Style Number", 
             "Product Name Character Count", 
-            "Product Title", 
+            "Product Title",
+            "Edit Product Title",
             "Description Character Count", 
-            "Product Description", 
+            "Product Description",
+            "Edit Product Description",
             "Tags", 
             "Product Category", 
             "Product Type", 
