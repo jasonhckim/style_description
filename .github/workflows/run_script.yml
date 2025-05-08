@@ -23,17 +23,21 @@ jobs:
           rm -rf ~/.cache/pip
           rm -rf /opt/hostedtoolcache/Python/3.9.22/x64/lib/python3.9/site-packages/openai*
 
-      - name: Install all other requirements
+      - name: Install base dependencies
         run: |
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
 
-      - name: Install correct OpenAI SDK (last to avoid override)
+      - name: Reinstall correct HTTPX version (required by OpenAI SDK)
+        run: pip install --force-reinstall "httpx>=0.27.0,<0.28.0"
+
+      - name: Install correct OpenAI SDK (must be after httpx)
         run: pip install --force-reinstall openai==1.13.3
 
-      - name: Confirm OpenAI version
+      - name: Confirm OpenAI + httpx versions
         run: |
           python -c "import openai; print('✅ OpenAI version:', openai.__version__); print('✅ OpenAI path:', openai.__file__)"
+          python -c "import httpx; print('✅ HTTPX version:', httpx.__version__)"
 
       - name: Create data directory
         run: mkdir -p data
