@@ -114,3 +114,15 @@ for file_id in file_ids_to_delete:
                 raise
 else:
     print(f"❌ Not enough rows to fine-tune (found {len(training_rows)}). Skipping upload.")
+
+from datetime import datetime
+
+with open("finetune_log.csv", "a", newline="") as log_file:
+    log_writer = csv.writer(log_file)
+    log_writer.writerow([
+        datetime.utcnow().isoformat(),
+        len(training_rows),
+        uploaded_file.id,
+        job.id,
+        job.fine_tuned_model
+    ])
