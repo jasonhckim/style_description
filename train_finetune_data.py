@@ -1,11 +1,13 @@
 import os
 import json
+import csv
+import io
 import pandas as pd
 import openai
+from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import io
 
 # CONFIG
 FOLDER_ID = "17fVHKtTVpv6QBpnGlf4_AV-6bPOGrHen"
@@ -33,7 +35,6 @@ if not files:
     exit()
 
 training_rows = []
-file_ids_to_delete = []
 
 for file in files:
     file_id = file["id"]
@@ -62,7 +63,11 @@ for file in files:
         if not values:
             print(f"⚠️ Google Sheet '{file_name}' is empty. Skipping.")
             continue
-        df = pd.DataFrame(values[1:], columns=values[0])
+
+        headers = values[0]
+        rows = values[1:]
+        normalized_rows = [row + [""] * (len(headers) - len(row)) for row in rows]
+        df = pd.DataFrame(normalized_rows, columns=headers)
     else:
         print(f"⚠️ Unsupported file type: {file_name}")
         continue
@@ -82,10 +87,7 @@ for file in files:
                 ]
             })
 
-    if len(training_rows) > 0:
-        file_ids_to_delete.append(file_id)
-
-# Submit to OpenAI if enough data
+# ✅ Upload and fine-tune
 if len(training_rows) >= MIN_TRAINING_ROWS:
     with open(JSONL_FILENAME, "w") as f:
         for row in training_rows:
@@ -101,28 +103,15 @@ if len(training_rows) >= MIN_TRAINING_ROWS:
     print(f"✅ Fine-tune job submitted: {job.id}")
     print(f"Training rows: {len(training_rows)}")
 
-    from googleapiclient.errors import HttpError
-
-for file_id in file_ids_to_delete:
-        try:
-            drive_service.files().delete(fileId=file_id).execute()
-            print(f"🗑️ Deleted file from Drive: {file_id}")
-        except HttpError as e:
-            if e.resp.status == 403:
-                print(f"⚠️ Skipped deletion — insufficient permissions for file: {file_id}")
-            else:
-                raise
+    # ✅ Log the job to CSV
+    with open("finetune_log.csv", "a", newline="") as log_file:
+        log_writer = csv.writer(log_file)
+        log_writer.writerow([
+            datetime.utcnow().isoformat(),
+            len(training_rows),
+            uploaded_file.id,
+            job.id,
+            job.fine_tuned_model
+        ])
 else:
     print(f"❌ Not enough rows to fine-tune (found {len(training_rows)}). Skipping upload.")
-
-from datetime import datetime
-
-with open("finetune_log.csv", "a", newline="") as log_file:
-    log_writer = csv.writer(log_file)
-    log_writer.writerow([
-        datetime.utcnow().isoformat(),
-        len(training_rows),
-        uploaded_file.id,
-        job.id,
-        job.fine_tuned_model
-    ])
