@@ -12,22 +12,24 @@ FOLDER_ID = "17fVHKtTVpv6QBpnGlf4_AV-6bPOGrHen"
 MIN_TRAINING_ROWS = 10
 JSONL_FILENAME = "training.jsonl"
 
-# Setup Google Drive credentials
+# Setup Google Drive & Sheets credentials
 creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 creds = service_account.Credentials.from_service_account_info(
-    creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
+    creds_dict,
+    scopes=["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets.readonly"]
 )
-drive = build("drive", "v3", credentials=creds)
+drive_service = build("drive", "v3", credentials=creds)
+sheets_service = build("sheets", "v4", credentials=creds)
 
-# List all CSVs in target folder
-results = drive.files().list(
-    q=f"'{FOLDER_ID}' in parents and mimeType='text/csv'",
-    fields="files(id, name)"
+# List CSV and Sheets in folder
+results = drive_service.files().list(
+    q=f"'{FOLDER_ID}' in parents and (mimeType='text/csv' or mimeType='application/vnd.google-apps.spreadsheet')",
+    fields="files(id, name, mimeType)"
 ).execute()
 
 files = results.get("files", [])
 if not files:
-    print("No CSV files found in the folder.")
+    print("No CSV or Google Sheets files found in the folder.")
     exit()
 
 training_rows = []
@@ -36,17 +38,34 @@ file_ids_to_delete = []
 for file in files:
     file_id = file["id"]
     file_name = file["name"]
+    mime_type = file["mimeType"]
 
-    # Download CSV from Drive
-    request = drive.files().get_media(fileId=file_id)
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while not done:
-        _, done = downloader.next_chunk()
-    fh.seek(0)
+    print(f"📄 Processing file: {file_name} ({mime_type})")
 
-    df = pd.read_csv(fh)
+    # Load into DataFrame
+    if mime_type == "text/csv":
+        request = drive_service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        fh.seek(0)
+        df = pd.read_csv(fh)
+
+    elif mime_type == "application/vnd.google-apps.spreadsheet":
+        sheet = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id,
+            range="A1:Z1000"
+        ).execute()
+        values = sheet.get("values", [])
+        if not values:
+            print(f"⚠️ Google Sheet '{file_name}' is empty. Skipping.")
+            continue
+        df = pd.DataFrame(values[1:], columns=values[0])
+    else:
+        print(f"⚠️ Unsupported file type: {file_name}")
+        continue
 
     for _, row in df.iterrows():
         title_changed = str(row["Product Title"]).strip() != str(row["Edit Product Title"]).strip()
@@ -74,15 +93,16 @@ if len(training_rows) >= MIN_TRAINING_ROWS:
 
     openai.api_key = os.environ["OPENAI_API_KEY"]
 
-    upload = openai.File.create(file=open(JSONL_FILENAME, "rb"), purpose="fine-tune")
-    job = openai.FineTuningJob.create(training_file=upload["id"], model="gpt-3.5-turbo")
+    with open(JSONL_FILENAME, "rb") as f:
+        uploaded_file = openai.files.create(file=f, purpose="fine-tune")
 
-    print(f"✅ Fine-tune job submitted: {job['id']}")
+    job = openai.fine_tuning.jobs.create(training_file=uploaded_file.id, model="gpt-3.5-turbo")
+
+    print(f"✅ Fine-tune job submitted: {job.id}")
     print(f"Training rows: {len(training_rows)}")
 
-    # Delete processed files
     for file_id in file_ids_to_delete:
-        drive.files().delete(fileId=file_id).execute()
-        print(f"Deleted CSV: {file_id}")
+        drive_service.files().delete(fileId=file_id).execute()
+        print(f"🗑️ Deleted file from Drive: {file_id}")
 else:
     print(f"❌ Not enough rows to fine-tune (found {len(training_rows)}). Skipping upload.")
