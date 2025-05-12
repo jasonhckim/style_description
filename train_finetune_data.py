@@ -101,8 +101,16 @@ if len(training_rows) >= MIN_TRAINING_ROWS:
     print(f"✅ Fine-tune job submitted: {job.id}")
     print(f"Training rows: {len(training_rows)}")
 
-    for file_id in file_ids_to_delete:
-        drive_service.files().delete(fileId=file_id).execute()
-        print(f"🗑️ Deleted file from Drive: {file_id}")
+    from googleapiclient.errors import HttpError
+
+for file_id in file_ids_to_delete:
+        try:
+            drive_service.files().delete(fileId=file_id).execute()
+            print(f"🗑️ Deleted file from Drive: {file_id}")
+        except HttpError as e:
+            if e.resp.status == 403:
+                print(f"⚠️ Skipped deletion — insufficient permissions for file: {file_id}")
+            else:
+                raise
 else:
     print(f"❌ Not enough rows to fine-tune (found {len(training_rows)}). Skipping upload.")
