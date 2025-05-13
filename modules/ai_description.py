@@ -41,8 +41,17 @@ def generate_description(style_number, images, keywords, max_retries=3):
 
             response = client.chat.completions.create(
                 model="gpt-4-turbo",
-                messages=[{"role": "system", "content": "You are a fashion expert."},
-                          {"role": "user", "content": [{"type": "text", "text": formatted_prompt}] + images}]
+                messages=[
+                    {"role": "system", "content": "You are a fashion expert."},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": formatted_prompt},
+                            {"type": "image_url", "image_url": image_url}
+                        ]
+                    }
+                ]
+
             )
 
             # ✅ Print OpenAI response
