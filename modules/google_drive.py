@@ -117,3 +117,30 @@ def extract_text_and_images_from_pdf(pdf_path):
         })
 
     return extracted_data
+
+
+def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
+    """Uploads an image to Google Drive and returns a public URL."""
+    file_metadata = {
+        "name": os.path.basename(local_image_path),
+        "mimeType": "image/png"
+    }
+
+    if folder_id:
+        file_metadata["parents"] = [folder_id]
+
+    media = MediaFileUpload(local_image_path, mimetype="image/png")
+    uploaded_file = drive_service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id"
+    ).execute()
+
+    # Make file public
+    drive_service.permissions().create(
+        fileId=uploaded_file["id"],
+        body={"type": "anyone", "role": "reader"},
+    ).execute()
+
+    return f"https://drive.google.com/uc?id={uploaded_file['id']}"
+
