@@ -1,8 +1,18 @@
 import logging
 import time
-import os
 import json
 import re
+from PIL import Image
+import uuid
+import os
+
+def save_image_temp(image_obj):
+    """Save a PIL Image to a temporary file and return the path."""
+    temp_dir = "/tmp" if os.name != "nt" else os.environ.get("TEMP", ".")
+    filename = os.path.join(temp_dir, f"{uuid.uuid4().hex}.png")
+    image_obj.save(filename, format="PNG")
+    return filename
+
 
 def setup_logging(log_file="script.log"):
     """Sets up logging configuration."""
