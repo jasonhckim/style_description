@@ -120,7 +120,7 @@ def process_pdf():
                 image_url = entry["images"][0]["image_url"]
 
                 # ✅ Generate description with that image URL
-                result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
+                result = ai_description.generate_description(entry["style_number"], [image_url], keywords, entry["text"])
                 processed_data.append(result)
 
             except Exception as e:
