@@ -45,13 +45,12 @@ def generate_description(style_number, images, keywords, max_retries=3):
                     {"role": "system", "content": "You are a fashion expert."},
                     {
                         "role": "user",
-                        "content": [
-                            {"type": "text", "text": formatted_prompt},
-                            {"type": "image_url", "image_url": images[0]}
+                        "content": [{"type": "text", "text": formatted_prompt}] + [
+                            {"type": "image_url", "image_url": {"url": url}} for url in images
                         ]
-
                     }
                 ]
+
 
             )
 
