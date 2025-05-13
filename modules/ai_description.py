@@ -20,7 +20,7 @@ except KeyError:
 # ✅ Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-def generate_description(style_number, images, keywords, max_retries=3):
+def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product descriptions using OpenAI and tracks used keywords."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
