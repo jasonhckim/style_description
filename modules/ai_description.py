@@ -47,8 +47,9 @@ def generate_description(style_number, images, keywords, max_retries=3):
                         "role": "user",
                         "content": [
                             {"type": "text", "text": formatted_prompt},
-                            {"type": "image_url", "image_url": image_url}
+                            {"type": "image_url", "image_url": images[0]}
                         ]
+
                     }
                 ]
 
