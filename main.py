@@ -117,8 +117,7 @@ def process_pdf():
 
             try:
                 # ✅ Save and upload first image only
-                temp_image_path = utils.save_image_temp(entry["images"][0])
-                image_url = google_drive.upload_image_to_public_url(temp_image_path, drive_service, folder_id=config["temp_image_folder_id"])
+                image_url = entry["images"][0]["image_url"]
 
                 # ✅ Generate description with that image URL
                 result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
@@ -186,7 +185,3 @@ from modules.utils import save_image_temp
     # Pass image_url into generate_description
     result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
     processed_data.append(result)
-
-# ✅ CLEANUP: Delete temp image file
-if os.path.exists(temp_image_path):
-    os.remove(temp_image_path)
