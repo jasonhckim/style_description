@@ -31,7 +31,8 @@ def generate_description(style_number, images, keywords, max_retries=3):
     formatted_prompt = generate_description_prompt.format(
         style_number=style_number,
         keywords=keyword_list,
-        set_text=set_text
+        set_text=set_text,
+        extracted_text=text
     ) + f"\n\nEnsure that the following keywords are seamlessly included in the description: {keyword_list}. If necessary, rephrase the description naturally to integrate these keywords."
 
 
