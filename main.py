@@ -174,14 +174,8 @@ def process_pdf():
 if __name__ == "__main__":
     process_pdf()
 
-from utils import save_image_temp
-from google_drive import upload_image_to_public_url
+from modules.utils import save_image_temp
 
-...
-
-for entry in extracted_data:
-    if not entry["images"]:
-        continue
     
     first_image = entry["images"][0]
     temp_image_path = save_image_temp(first_image)
