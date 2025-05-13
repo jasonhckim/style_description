@@ -105,10 +105,28 @@ def process_pdf():
         extracted_data = google_drive.extract_text_and_images_from_pdf(pdf_path)
         keywords = get_keywords_from_drive()
 
-        processed_data = [
-            ai_description.generate_description(entry["style_number"], entry["images"], keywords)
-            for entry in extracted_data
-        ]
+        # ✅ Auth once and reuse
+        drive_service = google_drive.get_drive_service()
+
+        processed_data = []
+
+        for entry in extracted_data:
+            if not entry["images"]:
+                print(f"⚠️ Skipping page {entry['page']} — no images found")
+                continue
+
+            try:
+                # ✅ Save and upload first image only
+                temp_image_path = utils.save_image_temp(entry["images"][0])
+                image_url = google_drive.upload_image_to_public_url(temp_image_path, drive_service, folder_id=config["temp_image_folder_id"])
+
+                # ✅ Generate description with that image URL
+                result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
+                processed_data.append(result)
+
+            except Exception as e:
+                print(f"❌ Error processing style {entry['style_number']}: {e}")
+                continue
 
         if not processed_data:
             print(f"❌ No processed data for {pdf_filename}")
@@ -116,7 +134,7 @@ def process_pdf():
 
         df = pd.DataFrame(processed_data)
 
-        # Validate required columns
+        # ✅ Expected columns
         expected_columns = [
             "Style Number", "Product Title", "Product Description", "Tags", 
             "Product Category", "Product Type", "Option2 Value", "Keywords"
@@ -126,19 +144,13 @@ def process_pdf():
             print(f"❌ Missing columns in DataFrame from {pdf_filename}: {missing_columns}")
             continue
 
-        # Add character count columns
+        # ✅ Add character count & edit fields
         df["Product Name Character Count"] = df["Product Title"].apply(lambda x: len(x) if pd.notnull(x) else 0)
         df["Description Character Count"] = df["Product Description"].apply(lambda x: len(x) if pd.notnull(x) else 0)
+        df["Edit Product Title"] = ""
+        df["Edit Product Description"] = ""
 
-        # Ensure editable columns exist
-        if "Edit Product Title" not in df.columns:
-            df["Edit Product Title"] = ""
-        
-        if "Edit Product Description" not in df.columns:
-            df["Edit Product Description"] = ""
-
-        
-        # Reorder columns
+        # ✅ Reorder columns
         column_order = [
             "Style Number", 
             "Product Name Character Count", 
@@ -158,5 +170,29 @@ def process_pdf():
         upload_to_google_sheets(df, pdf_filename, PDF_FOLDER_ID)
         print(f"✅ Finished processing {pdf_filename}")
 
+
 if __name__ == "__main__":
     process_pdf()
+
+from utils import save_image_temp
+from google_drive import upload_image_to_public_url
+
+...
+
+for entry in extracted_data:
+    if not entry["images"]:
+        continue
+    
+    first_image = entry["images"][0]
+    temp_image_path = save_image_temp(first_image)
+
+    # Upload to Drive and get public link
+    image_url = upload_image_to_public_url(temp_image_path, drive_service=drive_service, folder_id=config["temp_image_folder_id"])
+
+    # Pass image_url into generate_description
+    result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
+    processed_data.append(result)
+
+# ✅ CLEANUP: Delete temp image file
+if os.path.exists(temp_image_path):
+    os.remove(temp_image_path)
