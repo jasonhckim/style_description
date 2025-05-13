@@ -172,16 +172,3 @@ def process_pdf():
 
 if __name__ == "__main__":
     process_pdf()
-
-from modules.utils import save_image_temp
-
-    
-    first_image = entry["images"][0]
-    temp_image_path = save_image_temp(first_image)
-
-    # Upload to Drive and get public link
-    image_url = upload_image_to_public_url(temp_image_path, drive_service=drive_service, folder_id=config["temp_image_folder_id"])
-
-    # Pass image_url into generate_description
-    result = ai_description.generate_description(entry["style_number"], [image_url], keywords)
-    processed_data.append(result)
