@@ -88,24 +88,30 @@ def upload_file_to_drive(file_path, folder_id):
 # ✅ Extract text and images from PDF
 def extract_text_and_images_from_pdf(pdf_path):
     doc = fitz.open(pdf_path)
+    drive_service = get_drive_service()
     extracted_data = []
     style_regex = r"\b(DZ\d{2}[A-Z]\d{3,5}(-SET|-D)?|HF\d{2}[A-Z]\d{3,5}(-SET|-D)?)\b"
 
     for page_num in range(len(doc)):
         page = doc[page_num]
         text = page.get_text("text")
-        images = []
+        public_image_urls = []
 
-        for _, img in enumerate(page.get_images(full=True)):
+        for idx, img in enumerate(page.get_images(full=True)):
             xref = img[0]
             base_image = doc.extract_image(xref)
             image_bytes = base_image["image"]
-            image = Image.open(io.BytesIO(image_bytes))
-            img_io = io.BytesIO()
-            image.save(img_io, format="JPEG")
-            img_base64 = base64.b64encode(img_io.getvalue()).decode("utf-8")
-            images.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}})
+            pil_image = Image.open(io.BytesIO(image_bytes))
 
+            # Save to temp file
+            temp_path = f"/tmp/page{page_num+1}_img{idx}.png"
+            pil_image.save(temp_path, format="PNG")
+
+            # Upload to Drive
+            public_url = upload_image_to_public_url(temp_path, drive_service)
+            public_image_urls.append({"type": "image_url", "image_url": public_url})
+
+        # Extract style number
         style_number = re.findall(style_regex, text)
         style_number = style_number[0][0] if style_number else "Unknown"
 
@@ -113,10 +119,11 @@ def extract_text_and_images_from_pdf(pdf_path):
             "page": page_num + 1,
             "style_number": style_number,
             "text": text.strip(),
-            "images": images
+            "images": public_image_urls
         })
 
     return extracted_data
+
 
 
 def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
