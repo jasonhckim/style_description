@@ -8,3 +8,5 @@ drive_folder_ids:
 
 regex_patterns:
   style_number: "\\b(DZ\\d{2}[A-Z]\\d{3,5}(-SET|-D)?|HF\\d{2}[A-Z]\\d{3,5}(-SET|-D)?)\\b"
+
+transfer_ownership: true
