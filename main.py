@@ -87,6 +87,16 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     except Exception as e:
         print(f"❌ Failed to update worksheet: {e}")
 
+     # ====== TRANSFER OWNERSHIP ======
+        try:
+            transfer_file_ownership(sheet.id, "jason@hyfve.com")
+            print("✅ Ownership transferred to jason@hyfve.com")
+        except Exception as e:
+            print(f"❌ Failed to transfer ownership: {e}")
+
+    except Exception as e:
+        print(f"❌ Failed to update worksheet: {e}")
+        
 def process_pdf():
     """Extracts data from the latest PDFs, generates descriptions, and uploads to Google Sheets."""
     pdf_files = google_drive.list_all_files_in_drive(PDF_FOLDER_ID, "application/pdf")
@@ -172,3 +182,4 @@ def process_pdf():
 
 if __name__ == "__main__":
     process_pdf()
+
