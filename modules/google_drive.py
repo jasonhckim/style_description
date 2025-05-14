@@ -151,3 +151,35 @@ def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
 
     return f"https://drive.google.com/uc?id={uploaded_file['id']}"
 
+def transfer_file_ownership(file_id, new_owner_email):
+    """
+    Transfers ownership of a Google Drive file from the service account to a user
+    within the same Workspace domain (e.g., jason@hyfve.com).
+    This requires domain-wide delegation and impersonation.
+    """
+    service_account_json = os.environ.get("GOOGLE_CREDENTIALS")
+    if not service_account_json:
+        raise Exception("Missing GOOGLE_CREDENTIALS environment variable")
+
+    info = json.loads(service_account_json)
+    creds = service_account.Credentials.from_service_account_info(
+        info,
+        scopes=SCOPES,
+        subject=new_owner_email  # Impersonation!
+    )
+    drive_service = build("drive", "v3", credentials=creds)
+
+    try:
+        drive_service.permissions().create(
+            fileId=file_id,
+            body={
+                "type": "user",
+                "role": "owner",
+                "emailAddress": new_owner_email
+            },
+            transferOwnership=True
+        ).execute()
+        print(f"✅ Transferred ownership of file {file_id} to {new_owner_email}")
+    except Exception as e:
+        print(f"❌ ERROR: Ownership transfer failed. Debug: {e}")
+
