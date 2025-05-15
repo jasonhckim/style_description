@@ -80,22 +80,31 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     # ====== UPDATE WORKSHEET ======
     try:
         worksheet = sheet.get_worksheet(0) or sheet.add_worksheet(title="Sheet1", rows="1000", cols="10")
-        data = [df.columns.tolist()] + df.values.tolist()
         worksheet.clear()
-        worksheet.update(values=data, range_name="A1")
+        worksheet.update(values=[df.columns.tolist()] + df.values.tolist())
         print(f"✅ Data uploaded to: {sheet.url}")
     except Exception as e:
         print(f"❌ Failed to update worksheet: {e}")
 
-     # ====== TRANSFER OWNERSHIP ======
-        try:
-            transfer_file_ownership(sheet.id, "jason@hyfve.com")
-            print("✅ Ownership transferred to jason@hyfve.com")
-        except Exception as e:
-            print(f"❌ Failed to transfer ownership: {e}")
-
-    except Exception as e:
-        print(f"❌ Failed to update worksheet: {e}")
+        designer_cols = [
+        "Style Number",
+        "Product Name Character Count",
+        "Product Title",
+        "Description Character Count",
+        "Product Description"
+        ]
+        designer_df = df[designer_cols]
+        if "Designer" in [ws.title for ws in sheet.worksheets()]:
+            d_ws = sheet.worksheet("Designer")
+            d_ws.clear()
+        else:
+            d_ws = sheet.add_worksheet(title="Designer", rows="1000", cols="10")
+        d_ws.update(values=[designer_df.columns.tolist()] + designer_df.values.tolist())
+        
+        print("✅ Designer sheet synced")
+        
+        # ====== INJECT APPS SCRIPT  # NEW
+        google_drive.inject_sync_apps_script(sheet.id, creds)
         
 def process_pdf():
     """Extracts data from the latest PDFs, generates descriptions, and uploads to Google Sheets."""
