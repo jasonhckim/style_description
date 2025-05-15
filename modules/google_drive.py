@@ -25,7 +25,11 @@ DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
 # ✅ Google Drive API Scopes
-SCOPES = ["https://www.googleapis.com/auth/drive"]
+SCOPES = [
+    "https://www.googleapis.com/auth/drive", 
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.projects"
+]
 
 # ✅ Get Google Drive service using credentials
 def get_drive_service():
