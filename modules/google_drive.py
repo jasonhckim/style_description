@@ -168,7 +168,7 @@ def inject_sync_apps_script(sheet_id: str, creds) -> None:
 
     # ✅ onEdit code to sync Sheet1 → Designer
 
-on_edit_code = """
+    on_edit_code = """
 function onEdit(e) {
   const s = e.source.getActiveSheet();
   if (s.getName() !== 'Sheet1') return;
@@ -193,30 +193,30 @@ function onEdit(e) {
 }
 """.strip()
 
-    # ✅ Create Apps Script project bound to the Sheet
-    script_project = script_service.projects().create(
-        body={
-            "title": "SyncEdits",
-            "parentId": sheet_id
-        }
-    ).execute()
-    
-    project_id = script_project["scriptId"]
-    print("✅ Apps Script project created and bound:", project_id)
+  # ✅ Create Apps Script project bound to the Sheet
+  script_project = script_service.projects().create(
+      body={
+          "title": "SyncEdits",
+          "parentId": sheet_id
+      }
+  ).execute()
 
-    # ✅ Push script files
-    timezone = config.get("apps_script", {}).get("timezone", "America/Los_Angeles")
-    script_service.projects().updateContent(
-        scriptId=project_id,
-        body={
-            "files": [
-                {"name": "Code", "type": "SERVER_JS", "source": on_edit_code},
-                {"name": "appsscript", "type": "JSON", "source": json.dumps({
-                    "timeZone": timezone,
-                    "exceptionLogging": "STACKDRIVER"
-                })}
-            ]
-        }
-    ).execute()
+  project_id = script_project["scriptId"]
+  print("✅ Apps Script project created and bound:", project_id)
 
-    print("✅ Apps Script code injected")
+  # ✅ Push script files
+  timezone = config.get("apps_script", {}).get("timezone", "America/Los_Angeles")
+  script_service.projects().updateContent(
+      scriptId=project_id,
+      body={
+          "files": [
+              {"name": "Code", "type": "SERVER_JS", "source": on_edit_code},
+              {"name": "appsscript", "type": "JSON", "source": json.dumps({
+                  "timeZone": timezone,
+                  "exceptionLogging": "STACKDRIVER"
+              })}
+          ]
+      }
+  ).execute()
+
+  print("✅ Apps Script code injected")
