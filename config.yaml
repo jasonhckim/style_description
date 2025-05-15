@@ -10,5 +10,6 @@ regex_patterns:
   style_number: "\\b(DZ\\d{2}[A-Z]\\d{3,5}(-SET|-D)?|HF\\d{2}[A-Z]\\d{3,5}(-SET|-D)?)\\b"
 
 apps_script:
-  inject_editor_script: true  # Toggle on/off script injection
+  template_id: "1TPhLZs6kVTAvrSdwz1felrAq8c1Bd1xxfC-Z9-DAP2k"  # ID of your master Google Sheet with script
   timezone: "America/Los_Angeles"
+
