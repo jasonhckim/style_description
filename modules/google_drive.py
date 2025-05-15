@@ -167,30 +167,29 @@ def inject_sync_apps_script(sheet_id: str, creds) -> None:
     script_service = build_api("script", "v1", credentials=creds)
 
     # ✅ onEdit code to sync Sheet1 → Designer
-    on_edit_code = """
-function onEdit(e) {
-  const s = e.source.getActiveSheet();
-  if (s.getName() !== 'Sheet1') return;
-  const row = e.range.getRow();
-  if (row === 1) return;
-
-  const style = s.getRange(row, 1).getValue();
-  const titleEdit = s.getRange(row, 4).getValue();
-  const descEdit = s.getRange(row, 7).getValue();
-
-  const d = e.source.getSheetByName('Designer');
-  if (!d) return;
-
-  const data = d.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
+    on_edit_code = """function onEdit(e) {
+    const s = e.source.getActiveSheet();
+    if (s.getName() !== 'Sheet1') return;
+    const row = e.range.getRow();
+    if (row === 1) return;
+    
+    const style = s.getRange(row, 1).getValue();
+    const titleEdit = s.getRange(row, 4).getValue();
+    const descEdit = s.getRange(row, 7).getValue();
+    
+    const d = e.source.getSheetByName('Designer');
+    if (!d) return;
+    
+    const data = d.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
     if (data[i][0] === style) {
-      if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);
-      if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);
-      break;
+    if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);
+    if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);
+    break;
     }
-  }
-}
-""".strip()
+    }
+    }""".strip()
+
 
     # ✅ Create Apps Script project bound to the Sheet
     script_project = script_service.projects().create(
