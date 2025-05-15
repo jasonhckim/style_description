@@ -166,14 +166,12 @@ def copy_sheet_from_template(new_title, destination_folder_id, creds):
 
     copied_file = drive.files().copy(
         fileId=template_id,
-        body={
-            "name": new_title,
-            "parents": [destination_folder_id]
-        }
+        body={"name": new_title, "parents": [destination_folder_id]}
     ).execute()
 
     print(f"✅ Copied template to new sheet: https://docs.google.com/spreadsheets/d/{copied_file['id']}")
     return copied_file["id"]
+
 
 
 
