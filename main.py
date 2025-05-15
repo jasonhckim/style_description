@@ -42,7 +42,12 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     try:
         service_account_json = os.environ["GOOGLE_CREDENTIALS"]
         info = json.loads(service_account_json)
-        creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+        creds = service_account.Credentials.from_service_account_info(
+            info,
+            scopes=SCOPES,
+            subject="jason@hyfve.com"  # ✅ this must be a real Workspace user
+        )
+
         print("✅ Credentials validated")
     except Exception as e:
         print(f"❌ FATAL: Credential failure: {e}")
