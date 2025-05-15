@@ -23,7 +23,8 @@ CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.projects"
 ]
 
 def get_keywords_from_drive():
