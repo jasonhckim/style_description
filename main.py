@@ -51,11 +51,14 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
         return
 
     try:
-        drive_service = build("drive", "v3", credentials=creds)
-        copied_file = drive_service.files().copy(
-            fileId=TEMPLATE_SHEET_ID,
-            body={"name": sheet_name, "parents": [pdf_folder_id]}
-        ).execute()
+        sheet = client.open(sheet_name)
+        print(f"✅ Found existing sheet: {sheet_name}")
+    except gspread.SpreadsheetNotFound:
+        print(f"🛑 Copying template to create new sheet: {sheet_name}")
+        sheet_id = google_drive.copy_sheet_from_template(sheet_name, pdf_folder_id, creds)
+        sheet = client.open_by_key(sheet_id)
+
+        
         print("✅ Sheet copied from template")
     except Exception as e:
         print(f"❌ Failed to copy template: {e}")
