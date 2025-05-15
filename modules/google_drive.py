@@ -11,6 +11,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 from googleapiclient.http import MediaInMemoryUpload
+from googleapiclient.discovery import build as build_api
+
 
 
 # ✅ Load config.yaml
@@ -155,56 +157,61 @@ def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
 
 def inject_sync_apps_script(sheet_id: str, creds) -> None:
     """
-    Creates a bound Apps-Script project inside the Google Sheet and
-    writes the onEdit() trigger code that syncs Sheet1 → Designer.
+    Creates a bound Apps Script project attached to the Google Sheet (sheet_id)
+    and injects the onEdit sync logic.
     """
-    drive = build("drive", "v3", credentials=creds)
+    script_service = build_api("script", "v1", credentials=creds)
 
-    # --- JS code you want inside every sheet ---
+    # ✅ onEdit code to sync Sheet1 → Designer
     on_edit_code = """
 function onEdit(e) {
   const s = e.source.getActiveSheet();
   if (s.getName() !== 'Sheet1') return;
-  const row = e.range.getRow();        // edited row
-  if (row === 1) return;               // skip header
-  const style = s.getRange(row, 1).getValue();
+  const row = e.range.getRow();
+  if (row === 1) return;
 
-  const titleEdit       = s.getRange(row, 4).getValue(); // Edit Product Title
-  const descEdit        = s.getRange(row, 7).getValue(); // Edit Product Description
+  const style = s.getRange(row, 1).getValue();
+  const titleEdit = s.getRange(row, 4).getValue(); // D
+  const descEdit = s.getRange(row, 7).getValue();  // G
 
   const d = e.source.getSheetByName('Designer');
   if (!d) return;
 
   const data = d.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === style) {        // match Style Number
-      if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);   // col C
-      if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);    // col E
+    if (data[i][0] === style) {
+      if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);
+      if (descEdit) d.getRange(i+1, 5).setValue(descEdit);
       break;
     }
   }
 }
 """.strip()
 
-    # --- JSON payload for a bound Apps-Script project ---
-    script_manifest = {
-        "files": [
-            {"name": "Code", "type": "SERVER_JS", "source": on_edit_code},
-            {"name": "appsscript", "type": "JSON",
-             "source": "{\"timeZone\":\"America/Los_Angeles\",\"exceptionLogging\":\"STACKDRIVER\"}"}
-        ]
-    }
+    # ✅ Create Apps Script project bound to the Sheet
+    script_project = script_service.projects().create(
+        body={
+            "title": "SyncEdits",
+            "parentId": sheet_id
+        }
+    ).execute()
+    
+    project_id = script_project["scriptId"]
+    print("✅ Apps Script project created and bound:", project_id)
 
-    file_metadata = {
-        "mimeType": "application/vnd.google-apps.script+json",
-        "name": "SyncEdits",
-        "parents": [sheet_id]          # makes it *bound* to the sheet
-    }
+    # ✅ Push script files
+    timezone = config.get("apps_script", {}).get("timezone", "America/Los_Angeles")
+    script_service.projects().updateContent(
+        scriptId=project_id,
+        body={
+            "files": [
+                {"name": "Code", "type": "SERVER_JS", "source": on_edit_code},
+                {"name": "appsscript", "type": "JSON", "source": json.dumps({
+                    "timeZone": timezone,
+                    "exceptionLogging": "STACKDRIVER"
+                })}
+            ]
+        }
+    ).execute()
 
-    media = MediaInMemoryUpload(
-        json.dumps(script_manifest).encode("utf-8"),
-        mimetype="application/vnd.google-apps.script+json",
-        resumable=False
-    )
-    drive.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    print("✅ Bound Apps-Script injected")
+    print("✅ Apps Script code injected")
