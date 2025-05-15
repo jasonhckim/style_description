@@ -175,8 +175,8 @@ function onEdit(e) {
   if (row === 1) return;
 
   const style = s.getRange(row, 1).getValue();
-  const titleEdit = s.getRange(row, 4).getValue(); // D
-  const descEdit = s.getRange(row, 7).getValue();  // G
+  const titleEdit = s.getRange(row, 4).getValue();
+  const descEdit = s.getRange(row, 7).getValue();
 
   const d = e.source.getSheetByName('Designer');
   if (!d) return;
@@ -185,11 +185,12 @@ function onEdit(e) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === style) {
       if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);
-      if (descEdit) d.getRange(i+1, 5).setValue(descEdit);
+      if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);
       break;
     }
   }
 }
+
 """.strip()
 
     # ✅ Create Apps Script project bound to the Sheet
