@@ -37,6 +37,7 @@ def get_keywords_from_drive():
 def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
     sheet_name = pdf_filename.replace(".pdf", "")
 
+    # ✅ Step 1: Auth
     try:
         service_account_json = os.environ["GOOGLE_CREDENTIALS"]
         info = json.loads(service_account_json)
@@ -50,52 +51,53 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
         print(f"❌ FATAL: Credential failure: {e}")
         return
 
-    try:
-        sheet = client.open(sheet_name)
-        print(f"✅ Found existing sheet: {sheet_name}")
-    except gspread.SpreadsheetNotFound:
-        print(f"🛑 Copying template to create new sheet: {sheet_name}")
-        sheet_id = google_drive.copy_sheet_from_template(sheet_name, pdf_folder_id, creds)
-        sheet = client.open_by_key(sheet_id)
-
-        
-        print("✅ Sheet copied from template")
-    except Exception as e:
-        print(f"❌ Failed to copy template: {e}")
-        return
-
+    # ✅ Step 2: Create gspread client
     try:
         client = gspread.authorize(creds)
-        sheet = client.open_by_key(copied_file["id"])
-        print(f"✅ Sheet opened: {sheet_name}")
     except Exception as e:
-        print(f"❌ Failed to open new sheet: {e}")
+        print(f"❌ FATAL: Client authorization failed: {e}")
         return
 
+    # ✅ Step 3: Copy template and move it into correct folder
+    try:
+        print(f"🛠️ Copying sheet from template: {sheet_name}")
+        sheet_id = google_drive.copy_sheet_from_template(sheet_name, pdf_folder_id, creds)
+        sheet = client.open_by_key(sheet_id)
+        print(f"✅ New sheet created: {sheet.url}")
+    except Exception as e:
+        print(f"❌ Failed to copy and open sheet: {e}")
+        return
+
+    # ✅ Step 4: Write main data to first sheet
     try:
         worksheet = sheet.get_worksheet(0)
         worksheet.clear()
         worksheet.update(values=[df.columns.tolist()] + df.values.tolist())
-        print(f"✅ Data uploaded to: {sheet.url}")
+        print("✅ Main sheet updated")
     except Exception as e:
-        print(f"❌ Failed to update worksheet: {e}")
+        print(f"❌ Failed to update main worksheet: {e}")
 
-    designer_cols = [
-        "Style Number",
-        "Product Name Character Count",
-        "Product Title",
-        "Description Character Count",
-        "Product Description"
-    ]
-    designer_df = df[designer_cols]
+    # ✅ Step 5: Write Designer tab
     try:
-        d_ws = sheet.worksheet("Designer")
-    except:
-        d_ws = sheet.add_worksheet(title="Designer", rows="1000", cols="10")
+        designer_cols = [
+            "Style Number",
+            "Product Name Character Count",
+            "Product Title",
+            "Description Character Count",
+            "Product Description"
+        ]
+        designer_df = df[designer_cols]
 
-    d_ws.clear()
-    d_ws.update(values=[designer_df.columns.tolist()] + designer_df.values.tolist())
-    print("✅ Designer sheet synced")
+        try:
+            d_ws = sheet.worksheet("Designer")
+        except:
+            d_ws = sheet.add_worksheet(title="Designer", rows="1000", cols="10")
+
+        d_ws.clear()
+        d_ws.update(values=[designer_df.columns.tolist()] + designer_df.values.tolist())
+        print("✅ Designer sheet synced")
+    except Exception as e:
+        print(f"❌ Failed to update Designer worksheet: {e}")
 
 def process_pdf():
     pdf_files = google_drive.list_all_files_in_drive(PDF_FOLDER_ID, "application/pdf")
