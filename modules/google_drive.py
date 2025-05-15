@@ -10,6 +10,8 @@ import fitz  # PyMuPDF
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+from googleapiclient.http import MediaInMemoryUpload
+
 
 # ✅ Load config.yaml
 with open("config.yaml", "r") as f:
@@ -151,35 +153,58 @@ def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
 
     return f"https://drive.google.com/uc?id={uploaded_file['id']}"
 
-def transfer_file_ownership(file_id, new_owner_email):
+def inject_sync_apps_script(sheet_id: str, creds) -> None:
     """
-    Transfers ownership of a Google Drive file from the service account to a user
-    within the same Workspace domain (e.g., jason@hyfve.com).
-    This requires domain-wide delegation and impersonation.
+    Creates a bound Apps-Script project inside the Google Sheet and
+    writes the onEdit() trigger code that syncs Sheet1 → Designer.
     """
-    service_account_json = os.environ.get("GOOGLE_CREDENTIALS")
-    if not service_account_json:
-        raise Exception("Missing GOOGLE_CREDENTIALS environment variable")
+    drive = build("drive", "v3", credentials=creds)
 
-    info = json.loads(service_account_json)
-    creds = service_account.Credentials.from_service_account_info(
-        info,
-        scopes=SCOPES,
-        subject=new_owner_email  # Impersonation!
+    # --- JS code you want inside every sheet ---
+    on_edit_code = """
+function onEdit(e) {
+  const s = e.source.getActiveSheet();
+  if (s.getName() !== 'Sheet1') return;
+  const row = e.range.getRow();        // edited row
+  if (row === 1) return;               // skip header
+  const style = s.getRange(row, 1).getValue();
+
+  const titleEdit       = s.getRange(row, 4).getValue(); // Edit Product Title
+  const descEdit        = s.getRange(row, 7).getValue(); // Edit Product Description
+
+  const d = e.source.getSheetByName('Designer');
+  if (!d) return;
+
+  const data = d.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === style) {        // match Style Number
+      if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);   // col C
+      if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);    // col E
+      break;
+    }
+  }
+}
+""".strip()
+
+    # --- JSON payload for a bound Apps-Script project ---
+    script_manifest = {
+        "files": [
+            {"name": "Code", "type": "SERVER_JS", "source": on_edit_code},
+            {"name": "appsscript", "type": "JSON",
+             "source": "{\"timeZone\":\"America/Los_Angeles\",\"exceptionLogging\":\"STACKDRIVER\"}"}
+        ]
+    }
+
+    file_metadata = {
+        "mimeType": "application/vnd.google-apps.script+json",
+        "name": "SyncEdits",
+        "parents": [sheet_id]          # makes it *bound* to the sheet
+    }
+
+    media = MediaInMemoryUpload(
+        json.dumps(script_manifest).encode("utf-8"),
+        mimetype="application/vnd.google-apps.script+json",
+        resumable=False
     )
-    drive_service = build("drive", "v3", credentials=creds)
-
-    try:
-        drive_service.permissions().create(
-            fileId=file_id,
-            body={
-                "type": "user",
-                "role": "owner",
-                "emailAddress": new_owner_email
-            },
-            transferOwnership=True
-        ).execute()
-        print(f"✅ Transferred ownership of file {file_id} to {new_owner_email}")
-    except Exception as e:
-        print(f"❌ ERROR: Ownership transfer failed. Debug: {e}")
-
+    drive.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    print("✅ Bound Apps-Script injected")
