@@ -23,6 +23,7 @@ with open("config.yaml", "r") as f:
 PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
+TEMPLATE_SHEET_ID = config.get("google_sheet_template_id")
 
 # ✅ Google Drive API Scopes
 SCOPES = [
@@ -131,9 +132,8 @@ def extract_text_and_images_from_pdf(pdf_path):
         })
 
     return extracted_data
-
-
-
+    
+#Upload Image Publicly
 def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
     """Uploads an image to Google Drive and returns a public URL."""
     file_metadata = {
@@ -159,36 +159,18 @@ def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
 
     return f"https://drive.google.com/uc?id={uploaded_file['id']}"
 
-def inject_sync_apps_script(sheet_id: str, creds) -> None:
-    """
-    Creates a bound Apps Script project attached to the Google Sheet (sheet_id)
-    and injects the onEdit sync logic.
-    """
-    script_service = build_api("script", "v1", credentials=creds)
+#Copy a template Sheet
+def copy_sheet_from_template(new_title, destination_folder_id, creds):
+    drive = build("drive", "v3", credentials=creds)
+    template_id = config["google_sheet_template_id"]  # 👈 Match your config
 
-    # ✅ onEdit code to sync Sheet1 → Designer
-    on_edit_code = """function onEdit(e) {
-    const s = e.source.getActiveSheet();
-    if (s.getName() !== 'Sheet1') return;
-    const row = e.range.getRow();
-    if (row === 1) return;
-    
-    const style = s.getRange(row, 1).getValue();
-    const titleEdit = s.getRange(row, 4).getValue();
-    const descEdit = s.getRange(row, 7).getValue();
-    
-    const d = e.source.getSheetByName('Designer');
-    if (!d) return;
-    
-    const data = d.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === style) {
-    if (titleEdit) d.getRange(i+1, 3).setValue(titleEdit);
-    if (descEdit)  d.getRange(i+1, 5).setValue(descEdit);
-    break;
-    }
-    }
-    }""".strip()
+    copied_file = drive.files().copy(
+        fileId=template_id,
+        body={"name": new_title, "parents": [destination_folder_id]}
+    ).execute()
+
+    print(f"✅ Copied template to new sheet: https://docs.google.com/spreadsheets/d/{copied_file['id']}")
+    return copied_file["id"]
 
 
     # ✅ Create Apps Script project bound to the Sheet
