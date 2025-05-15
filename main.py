@@ -67,8 +67,18 @@ def upload_to_google_sheets(df, pdf_filename, pdf_folder_id):
         sheet = client.open(sheet_name)
         print(f"✅ Found existing sheet: {sheet_name}")
     except gspread.SpreadsheetNotFound:
-        print(f"🛑 Creating new sheet: {sheet_name}")
+        print(f"🛑 Creating NEW sheet (even if name duplicates): {sheet_name}")
         sheet = client.create(sheet_name)
+        
+        # Move to correct folder
+        drive_service = build("drive", "v3", credentials=creds)
+        drive_service.files().update(
+            fileId=sheet.id,
+            addParents=pdf_folder_id,
+            removeParents="root",
+            fields="id, parents"
+        ).execute()
+
 
     # ====== MOVE TO FOLDER ======
     try:
