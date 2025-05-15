@@ -6,7 +6,7 @@ drive_folder_ids:
   doc: "1Ja_3axmjpBO0pTImZiGNFF4qEtgPt50z"
   csv: "1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"
 
-template_sheet_id: "1jz-1gNw5hEEhKgq28v7G8dkdaNcBIw2UjLjCkgAskhp7w3VFkdu_7_QZ"
+template_sheet_id: "1MgmD0ncx7GmtmEaxQmhs8m_bi-1TBGeX8q4cixcFiF4"
 
 regex_patterns:
   style_number: "\\b(DZ\\d{2}[A-Z]\\d{3,5}(-SET|-D)?|HF\\d{2}[A-Z]\\d{3,5}(-SET|-D)?)\\b"
