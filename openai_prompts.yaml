@@ -10,7 +10,9 @@ generate_description_prompt: |
   - If there is no 'SET', categorize it appropriately. **Category name must always be provided.**
   - Do not infer based on typical features of sweaters or common styles. Only trust what is explicitly shown or written.
   - If uncertain about a design detail, exclude it entirely. Err on the side of omission over speculation.
-
+  - Do not mention material names (e.g., “alpaca”, “cotton”, “polyester”) unless they are in red font above the image or explicitly labeled in text.
+  - Phrases like “alpaca blend”, “soft feel”, or “luxurious knit” must be excluded unless supported by visible or labeled information.
+  - Do NOT mention size availability (e.g., S/M/L or one size) in the description or title — sizing should never be referenced, even if present in the text.
 
 
   - If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
