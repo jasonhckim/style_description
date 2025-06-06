@@ -4,10 +4,14 @@ generate_description_prompt: |
 
   - Extracted PDF text: **{extracted_text}**
   
-  - Never assume fabric, texture, neckline, or closure style unless explicitly visible or labeled. 
+  - If buttons, zippers, texture (e.g. chunky, fuzzy), or necklines (e.g. v-neck) are not explicitly mentioned in text or image, treat them as not present.
   - Never mention "velvet", "v-neck", or similar unless it is clearly visible or specified in the image/text.
   - If the style number contains 'SET', it is a **coordinated clothing set** (e.g., top & bottom, dress & cardigan). 
   - If there is no 'SET', categorize it appropriately. **Category name must always be provided.**
+  - Do not infer based on typical features of sweaters or common styles. Only trust what is explicitly shown or written.
+  - If uncertain about a design detail, exclude it entirely. Err on the side of omission over speculation.
+
+
 
   - If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
     - **MUST** be included in the **description**
