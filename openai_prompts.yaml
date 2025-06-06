@@ -13,6 +13,9 @@ generate_description_prompt: |
   - Do not mention material names (e.g., “alpaca”, “cotton”, “polyester”) unless they are in red font above the image or explicitly labeled in text.
   - Phrases like “alpaca blend”, “soft feel”, or “luxurious knit” must be excluded unless supported by visible or labeled information.
   - Do NOT mention size availability (e.g., S/M/L or one size) in the description or title — sizing should never be referenced, even if present in the text.
+  - Do NOT include style numbers or any product codes in the title or description. These are internal and should never appear in customer-facing text.
+  - Do NOT mention any color names, even if they are provided or visible. Descriptions must remain color-agnostic.
+
 
 
   - If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
