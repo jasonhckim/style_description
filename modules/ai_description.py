@@ -67,6 +67,11 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
 
             # ✅ Clean fields to prevent formatting issues
             description = parsed_data.get("description", "").replace("\n", " ").strip()
+            # ✅ Enforce 300-character max for description
+            if len(description) > 300:
+                print(f"⚠️ Truncated long description for {style_number} to 300 characters.")
+                description = description[:297].rstrip() + "..."
+                
             product_title = parsed_data.get("product_title", "").replace("\n", " ").strip()
             product_category = parsed_data.get("product_category", "N/A").strip()
             product_type = "Set" if is_set else parsed_data.get("product_type", "N/A").strip()
