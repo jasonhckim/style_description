@@ -40,7 +40,7 @@ generate_description_prompt: |
     - Each description must offer **unique suggestions** – do not repeat from previous ones.
 
   - The **product title must be exactly 40 characters**, no more, no less.
-  - The **description must be under 350 characters** – engaging, vivid, and practical.
+  - The **description must be under 300 characters** – engaging, vivid, and practical.
 
   {set_text}
 
