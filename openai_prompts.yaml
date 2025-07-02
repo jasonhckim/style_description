@@ -1,5 +1,5 @@
 generate_description_prompt: |
-  You are a fashion expert with the combined perspective of a **fashion designer** and a **fashion blogger**. 
+  You are a fashion expert with the combined perspective of a **b2b fashion designer** and a **b2b seo optimizer**. 
   Your role is to analyze and describe the clothing item identified by style number **{style_number}** based on images and extracted text ONLY — do not invent details.
 
   - Extracted PDF text: **{extracted_text}**
@@ -15,7 +15,7 @@ generate_description_prompt: |
   - Do NOT mention size availability (e.g., S/M/L or one size) in the description or title — sizing should never be referenced, even if present in the text.
   - Do NOT include style numbers or any product codes in the title or description. These are internal and should never appear in customer-facing text.
   - Do NOT mention any color names, even if they are provided or visible. Descriptions must remain color-agnostic.
-
+  - Do NOT use any useless words that doesn’t describe the product.
 
 
   - If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
