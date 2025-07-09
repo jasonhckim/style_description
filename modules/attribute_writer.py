@@ -4,14 +4,6 @@ import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
-import sys
-print("DEBUG: Python path:", sys.path)
-try:
-    import gspread_dataframe
-    print("✅ gspread_dataframe successfully imported")
-except Exception as e:
-    print("❌ gspread_dataframe import failed:", e)
-    raise
 
 def download_marketplace_attributes(creds):
     import gspread
@@ -26,83 +18,87 @@ def download_marketplace_attributes(creds):
     for tab in ["faire", "fgo"]:
         worksheet = sheet.worksheet(tab)
         df = get_as_dataframe(worksheet, evaluate_formulas=True, header=None)
-        df.columns = df.iloc[0]  # Promote first row as header
-        df = df[1:]              # Drop the row that became header
-        data[tab] = df.reset_index(drop=True)
+        data[tab] = df
 
     return data
 
-
-def extract_allowed_columns(row):
-    allowed = {}
-    for col, val in row.items():
-        if pd.isna(val):
+def extract_allowed_columns(product_row, attribute_row):
+    category_to_columns = {}
+    for col_idx, category in enumerate(product_row):
+        if pd.isna(category):
             continue
-        match = re.search(r"\\((\\d)\\)", str(val))
-        allowed_count = int(match.group(1)) if match else 1
-        allowed[col] = allowed_count
-    return allowed
-
-def select_values_for_category(df, category, allowed_columns):
-    selected_values = {}
-    for col, max_count in allowed_columns.items():
-        if col not in df.columns:
+        category = str(category).strip()
+        attr = str(attribute_row[col_idx]).strip()
+        if not category:
             continue
+        if category not in category_to_columns:
+            category_to_columns[category] = []
+        category_to_columns[category].append((col_idx, attr))
+    return category_to_columns
+
+def parse_selection_limit(attribute_name):
+    match = re.search(r"\\((\\d)\\)", attribute_name)
+    return int(match.group(1)) if match else 1
+
+def select_values_for_category(df, col_indices):
+    output_row = {}
+    for col_idx, attr_name in col_indices:
         try:
-            col_series = df[col].dropna()
-            candidates = col_series.unique().tolist() if not col_series.empty else []
-            selected = candidates[:max_count]
-            selected_values[col] = ", ".join(selected)
+            col_series = df.iloc[2:, col_idx].dropna()
+            limit = parse_selection_limit(attr_name)
+            values = col_series.unique().tolist()
+            selected = values[:limit]
+            output_row[attr_name] = ", ".join(selected)
         except Exception as e:
-            print(f"⚠️ Error processing column '{col}': {e}")
-            selected_values[col] = ""
-    return selected_values
+            print(f"⚠️ Error processing column {col_idx} ({attr_name}): {e}")
+            output_row[attr_name] = ""
+    return output_row
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     from gspread import authorize
-    from google.auth.transport.requests import Request
     import gspread
 
     marketplace_data = download_marketplace_attributes(creds)
-
     client = authorize(creds)
     drive = build("drive", "v3", credentials=creds)
 
     sheet_title = pdf_filename.replace(".pdf", " marketplace attribute")
-
-    # Create new blank spreadsheet
     spreadsheet = client.create(sheet_title)
     spreadsheet_id = spreadsheet.id
     drive.files().update(fileId=spreadsheet_id, addParents=folder_id, removeParents="root").execute()
 
     for tab_name in ["faire", "fgo"]:
         tab_df = marketplace_data[tab_name]
-        header_row = tab_df.iloc[0]
-        allowed_columns = extract_allowed_columns(header_row)
-        data_start_row = 1
+
+        product_row = tab_df.iloc[0]  # Row 1
+        attribute_row = tab_df.iloc[1]  # Row 2
+        value_df = tab_df.iloc[2:].reset_index(drop=True)  # From Row 3 on
+
+        category_to_columns = extract_allowed_columns(product_row, attribute_row)
 
         output_rows = []
         for _, row in df.iterrows():
-            product_type = row.get("Product Type", "N/A")
-            product_category = row.get("Product Category", product_type)
-            selected = select_values_for_category(tab_df.iloc[data_start_row:], product_category, allowed_columns)
-            selected["Style Number"] = row.get("Style Number")
-            output_rows.append(selected)
+            style_number = row.get("Style Number", "")
+            product_type = row.get("Product Type", "") or row.get("Product Category", "")
+            col_indices = category_to_columns.get(product_type, [])
+            selected_attrs = select_values_for_category(tab_df, col_indices)
+            selected_attrs["Style Number"] = style_number
+            output_rows.append(selected_attrs)
 
-        # Ensure all columns are present for consistency
-        all_columns = ["Style Number"] + list(allowed_columns.keys())
-        final_df = pd.DataFrame(output_rows)[all_columns]
-        
-        # ✅ Clean data: remove invalid float values and convert everything to strings
-        final_df = final_df.replace([float("inf"), float("-inf")], "")
-        final_df = final_df.fillna("")
-        final_df = final_df.astype(str)
-        
+        all_headers = ["Style Number"] + [attr for _, attr in sorted(set(sum(category_to_columns.values(), [])))]
+        final_df = pd.DataFrame(output_rows)
+        for col in all_headers:
+            if col not in final_df.columns:
+                final_df[col] = ""
+        final_df = final_df[all_headers]  # Reorder
+
+        final_df = final_df.fillna("").replace([float("inf"), float("-inf")], "").astype(str)
+
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
             sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="20")
-        
+
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
