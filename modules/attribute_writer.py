@@ -37,15 +37,27 @@ def extract_column_info(header_row):
     col_info = []
     for idx, col in enumerate(header_row):
         if pd.isna(col) or col == "":
-            col_info.append({"index": idx, "prefix": None, "name": ""})
+            col_info.append({"index": idx, "prefix": None, "name": "", "limit": 1})
             continue
         col = str(col)
+        limit = parse_selection_limit(col)  # ✅ Add this
         if ":" in col:
             prefix, name = col.split(":", 1)
-            col_info.append({"index": idx, "prefix": prefix.strip().lower(), "name": name.strip()})
+            col_info.append({
+                "index": idx,
+                "prefix": prefix.strip().lower(),
+                "name": name.strip(),
+                "limit": limit
+            })
         else:
-            col_info.append({"index": idx, "prefix": None, "name": col.strip()})
+            col_info.append({
+                "index": idx,
+                "prefix": None,
+                "name": col.strip(),
+                "limit": limit
+            })
     return col_info
+
 
 def category_matches(prefix, product_category):
     if not prefix:
