@@ -4,6 +4,14 @@ import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
+import sys
+print("DEBUG: Python path:", sys.path)
+try:
+    import gspread_dataframe
+    print("✅ gspread_dataframe successfully imported")
+except Exception as e:
+    print("❌ gspread_dataframe import failed:", e)
+    raise
 
 def download_marketplace_attributes(creds):
     import gspread
