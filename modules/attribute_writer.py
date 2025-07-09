@@ -56,22 +56,47 @@ def category_matches(prefix, product_category):
             return True
     return False
 
-def select_attributes(product_category, col_info, df_values):
-    selected = {}
+def select_attributes(product_description, category, col_info, df_values, style_number):
+    selected = {"Style Number": style_number}
     for col in col_info:
         attr_name = col["name"]
         prefix = col["prefix"]
-        col_idx = col["index"]
+        max_select = col["limit"]
+        values = df_values[attr_name].dropna().unique().tolist()
 
-        if not attr_name or not category_matches(prefix, product_category):
+        # Only use this column if prefix is None or matches category
+        if prefix and prefix.lower() not in category.lower():
+            continue
+        if not values or not attr_name:
             continue
 
-        limit = parse_selection_limit(attr_name)
-        candidates = df_values.iloc[:, col_idx].dropna().astype(str).str.strip().unique().tolist()
-        filtered = [val for val in candidates if val]
-        if filtered:
-            selected[attr_name] = ", ".join(filtered[:limit])
+        # Call OpenAI to pick matching values
+        prompt = f"""
+You are a fashion data assistant helping map a clothing item's attributes to a structured marketplace.
+
+Style Number: {style_number}
+Category: {category}
+Description: {product_description}
+
+From the following attribute list for **{attr_name}**, choose up to {max_select} values that apply:
+{values}
+
+Return only a comma-separated string of the selected values (or empty if none match).
+        """
+
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+            answer = response.choices[0].message.content.strip()
+            selected[attr_name] = answer
+        except Exception as e:
+            print(f"⚠️ Error selecting for {attr_name}: {e}")
+            selected[attr_name] = ""
     return selected
+
 
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
     drive = build("drive", "v3", credentials=creds)
