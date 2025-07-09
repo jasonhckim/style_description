@@ -4,6 +4,7 @@ import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
+import numpy as np
 
 def download_marketplace_attributes(creds):
     import gspread
@@ -84,21 +85,25 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
             selected_attrs = select_values_for_category(tab_df, col_indices)
             selected_attrs["Style Number"] = style_number
             output_rows.append(selected_attrs)
-
-        all_headers = ["Style Number"] + [attr for _, attr in sorted(set(sum(category_to_columns.values(), [])))]
+            
+        all_headers = ["Style Number"] + sorted(set(attr for pairs in category_to_columns.values() for _, attr in pairs))
         final_df = pd.DataFrame(output_rows)
+        
+        # Ensure all expected columns exist
         for col in all_headers:
             if col not in final_df.columns:
                 final_df[col] = ""
-        final_df = final_df[all_headers]  # Reorder
-
-        final_df = final_df.fillna("").replace([float("inf"), float("-inf")], "").astype(str)
-
+        
+        final_df = final_df[all_headers]  # Reorder columns
+        
+        # ✅ Clean JSON-invalid values: NaN, inf, -inf
+        final_df = final_df.replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
+        
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
             sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="20")
-
+        
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
