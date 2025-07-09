@@ -183,7 +183,6 @@ def process_pdf():
             continue
 
         upload_to_google_sheets(df, pdf_filename, PDF_FOLDER_ID)
-        from modules.attribute_writer import write_marketplace_attribute_sheet
         write_marketplace_attribute_sheet(df, pdf_filename, creds, PDF_FOLDER_ID)
 
         print(f"✅ Finished processing {pdf_filename}")
