@@ -6,6 +6,15 @@ from googleapiclient.discovery import build
 from gspread_dataframe import get_as_dataframe
 import gspread
 
+CATEGORY_ALIASES = {
+    "shorts": ["bottom", "shorts"],
+    "top": ["top", "shirt", "blouse", "cami"],
+    "dress": ["dress", "dresses"],
+    "skirt": ["skirt", "bottom"],
+    "hoodie": ["outerwear", "hoodie", "jacket"],
+    "pants": ["bottom", "pants", "trousers"],
+}
+
 def download_marketplace_attributes(creds):
     sheet_id = "12lJYw9TL97djaPKjF3qKp-Bio-5sQmPbsprEvD4mERA"
     client = gspread.authorize(creds)
@@ -28,6 +37,15 @@ def extract_category_attributes(df):
             col_metadata[col] = {"prefix": None, "attr": col_str.strip()}
     return col_metadata
 
+def is_category_match(col_prefix, product_category):
+    if not col_prefix:
+        return True  # Global column
+    product_category = product_category.lower()
+    for alias_list in CATEGORY_ALIASES.values():
+        if col_prefix in alias_list and any(cat in product_category for cat in alias_list):
+            return True
+    return False
+
 def select_applicable_attributes(df, product_category, col_metadata):
     values = {}
     for col in df.columns:
@@ -35,8 +53,7 @@ def select_applicable_attributes(df, product_category, col_metadata):
         if not meta["attr"]:
             continue
 
-        # Include global columns or those with matching category prefix
-        if meta["prefix"] is None or meta["prefix"] in product_category.lower():
+        if is_category_match(meta["prefix"], product_category):
             limit = parse_selection_limit(meta["attr"])
             col_series = df[col].dropna().astype(str).str.strip()
             unique_vals = col_series[col_series != ""].unique().tolist()
