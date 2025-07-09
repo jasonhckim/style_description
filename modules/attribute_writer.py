@@ -5,6 +5,7 @@ import numpy as np
 from googleapiclient.discovery import build
 from gspread_dataframe import get_as_dataframe
 import gspread
+import openai
 
 CATEGORY_ALIASES = {
     "shorts": ["bottom", "shorts"],
@@ -24,8 +25,8 @@ def download_marketplace_attributes(creds):
     for tab in ["faire", "fgo"]:
         worksheet = sheet.worksheet(tab)
         df = get_as_dataframe(worksheet, evaluate_formulas=True, header=0).fillna("")
-        header_row = df.iloc[0]  # Row 1: Attribute names (e.g., "Color (1)", "TOP: Sleeve Length (1)")
-        df = df[1:].reset_index(drop=True)  # Rows 2+ contain values
+        header_row = df.iloc[0]  # Row 1: Attribute names
+        df = df[1:].reset_index(drop=True)
         tabs[tab] = (header_row, df)
     return tabs
 
@@ -40,24 +41,17 @@ def extract_column_info(header_row):
             col_info.append({"index": idx, "prefix": None, "name": "", "limit": 1})
             continue
         col = str(col)
-        limit = parse_selection_limit(col)  # ✅ Add this
         if ":" in col:
             prefix, name = col.split(":", 1)
-            col_info.append({
-                "index": idx,
-                "prefix": prefix.strip().lower(),
-                "name": name.strip(),
-                "limit": limit
-            })
         else:
-            col_info.append({
-                "index": idx,
-                "prefix": None,
-                "name": col.strip(),
-                "limit": limit
-            })
+            prefix, name = None, col
+        col_info.append({
+            "index": idx,
+            "prefix": prefix.strip().lower() if prefix else None,
+            "name": name.strip(),
+            "limit": parse_selection_limit(name),
+        })
     return col_info
-
 
 def category_matches(prefix, product_category):
     if not prefix:
@@ -74,15 +68,17 @@ def select_attributes(product_description, category, col_info, df_values, style_
         attr_name = col["name"]
         prefix = col["prefix"]
         max_select = col["limit"]
-        values = df_values[attr_name].dropna().unique().tolist()
-
-        # Only use this column if prefix is None or matches category
-        if prefix and prefix.lower() not in category.lower():
+        if not attr_name:
             continue
-        if not values or not attr_name:
+        if prefix and not category_matches(prefix, category):
+            continue
+        try:
+            values = df_values.iloc[:, col["index"]].dropna().astype(str).unique().tolist()
+        except:
+            values = []
+        if not values:
             continue
 
-        # Call OpenAI to pick matching values
         prompt = f"""
 You are a fashion data assistant helping map a clothing item's attributes to a structured marketplace.
 
@@ -95,7 +91,6 @@ From the following attribute list for **{attr_name}**, choose up to {max_select}
 
 Return only a comma-separated string of the selected values (or empty if none match).
         """
-
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4-turbo",
@@ -109,23 +104,19 @@ Return only a comma-separated string of the selected values (or empty if none ma
             selected[attr_name] = ""
     return selected
 
-
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
     drive = build("drive", "v3", credentials=creds)
     client = gspread.authorize(creds)
 
     spreadsheet = client.create(pdf_filename.replace(".pdf", " marketplace attribute"))
     spreadsheet_id = spreadsheet.id
-
-    # Move into destination folder
     drive.files().update(fileId=spreadsheet_id, addParents=folder_id, removeParents="root").execute()
-
     marketplace_data = download_marketplace_attributes(creds)
 
     for tab_name, (header_row, df_values) in marketplace_data.items():
         col_info = extract_column_info(header_row)
-
         output_rows = []
+
         for _, row in description_df.iterrows():
             selected = select_attributes(
                 product_description=row.get("Product Description", ""),
@@ -136,17 +127,13 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
             )
             output_rows.append(selected)
 
-
-        # Prepare columns from row 1, inserting 'Style Number' first
         ordered_columns = ["Style Number"] + [c["name"] for c in col_info if c["name"]]
-
         final_df = pd.DataFrame(output_rows)
         for col in ordered_columns:
             if col not in final_df.columns:
                 final_df[col] = ""
         final_df = final_df[ordered_columns].replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
 
-        # Create new tab and upload data
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
@@ -155,10 +142,8 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
-    # ✅ Now delete "Sheet1" AFTER creating faire/fgo
     try:
-        sheet1 = spreadsheet.worksheet("Sheet1")
-        spreadsheet.del_worksheet(sheet1)
+        spreadsheet.del_worksheet(spreadsheet.worksheet("Sheet1"))
     except:
         pass
 
