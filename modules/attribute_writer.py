@@ -10,8 +10,8 @@ CATEGORY_ALIASES = {
     "shorts": ["bottom", "shorts"],
     "top": ["top", "shirt", "blouse", "cami"],
     "dress": ["dress", "dresses"],
-    "skirt": ["skirt", "bottom"],
-    "hoodie": ["outerwear", "hoodie", "jacket"],
+    "skirt": ["skirt", "bottom", "skirt"],
+    "hoodie": ["outerwear", "hoodie", "jacket", "sweatshirt"],
     "pants": ["bottom", "pants", "trousers"],
 }
 
@@ -19,83 +19,101 @@ def download_marketplace_attributes(creds):
     sheet_id = "12lJYw9TL97djaPKjF3qKp-Bio-5sQmPbsprEvD4mERA"
     client = gspread.authorize(creds)
     sheet = client.open_by_key(sheet_id)
-    return {tab: get_as_dataframe(sheet.worksheet(tab), evaluate_formulas=True, header=1).fillna("") for tab in ["faire", "fgo"]}
 
-def parse_selection_limit(attribute_name):
-    match = re.search(r"\((\d)\)", attribute_name)
+    tabs = {}
+    for tab in ["faire", "fgo"]:
+        worksheet = sheet.worksheet(tab)
+        df = get_as_dataframe(worksheet, evaluate_formulas=True, header=0).fillna("")
+        header_row = df.iloc[0]  # Row 1: Attribute names (e.g., "Color (1)", "TOP: Sleeve Length (1)")
+        df = df[1:].reset_index(drop=True)  # Rows 2+ contain values
+        tabs[tab] = (header_row, df)
+    return tabs
+
+def parse_selection_limit(attr_name):
+    match = re.search(r"\((\d+)\)", attr_name)
     return int(match.group(1)) if match else 1
 
-def extract_category_attributes(df):
-    # Recognize columns with prefixes like "DRESS:", "TOP:", etc.
-    col_metadata = {}
-    for col in df.columns:
-        col_str = str(col).strip()
-        if ':' in col_str:
-            prefix, attr = col_str.split(':', 1)
-            col_metadata[col] = {"prefix": prefix.strip().lower(), "attr": attr.strip()}
+def extract_column_info(header_row):
+    col_info = []
+    for idx, col in enumerate(header_row):
+        if pd.isna(col) or col == "":
+            col_info.append({"index": idx, "prefix": None, "name": ""})
+            continue
+        col = str(col)
+        if ":" in col:
+            prefix, name = col.split(":", 1)
+            col_info.append({"index": idx, "prefix": prefix.strip().lower(), "name": name.strip()})
         else:
-            col_metadata[col] = {"prefix": None, "attr": col_str.strip()}
-    return col_metadata
+            col_info.append({"index": idx, "prefix": None, "name": col.strip()})
+    return col_info
 
-def is_category_match(col_prefix, product_category):
-    if not col_prefix:
-        return True  # Global column
+def category_matches(prefix, product_category):
+    if not prefix:
+        return True
     product_category = product_category.lower()
     for alias_list in CATEGORY_ALIASES.values():
-        if col_prefix in alias_list and any(cat in product_category for cat in alias_list):
+        if prefix in alias_list and any(cat in product_category for cat in alias_list):
             return True
     return False
 
-def select_applicable_attributes(df, product_category, col_metadata):
-    values = {}
-    for col in df.columns:
-        meta = col_metadata[col]
-        if not meta["attr"]:
+def select_attributes(product_category, col_info, df_values):
+    selected = {}
+    for col in col_info:
+        attr_name = col["name"]
+        prefix = col["prefix"]
+        col_idx = col["index"]
+
+        if not attr_name or not category_matches(prefix, product_category):
             continue
 
-        if is_category_match(meta["prefix"], product_category):
-            limit = parse_selection_limit(meta["attr"])
-            col_series = df[col].dropna().astype(str).str.strip()
-            unique_vals = col_series[col_series != ""].unique().tolist()
-            selected = unique_vals[:limit]
-            if selected:
-                values[meta["attr"]] = ", ".join(selected)
-    return values
+        limit = parse_selection_limit(attr_name)
+        candidates = df_values.iloc[:, col_idx].dropna().astype(str).str.strip().unique().tolist()
+        filtered = [val for val in candidates if val]
+        if filtered:
+            selected[attr_name] = ", ".join(filtered[:limit])
+    return selected
 
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
-    marketplace_data = download_marketplace_attributes(creds)
     drive = build("drive", "v3", credentials=creds)
     client = gspread.authorize(creds)
 
-    sheet_title = pdf_filename.replace(".pdf", " marketplace attribute")
-    spreadsheet = client.create(sheet_title)
+    spreadsheet = client.create(pdf_filename.replace(".pdf", " marketplace attribute"))
     spreadsheet_id = spreadsheet.id
+
+    # Move into destination folder
     drive.files().update(fileId=spreadsheet_id, addParents=folder_id, removeParents="root").execute()
 
-    for tab_name, tab_df in marketplace_data.items():
-        col_metadata = extract_category_attributes(tab_df)
-        output_rows = []
+    marketplace_data = download_marketplace_attributes(creds)
 
+    for tab_name, (header_row, df_values) in marketplace_data.items():
+        col_info = extract_column_info(header_row)
+
+        output_rows = []
         for _, row in description_df.iterrows():
             style_number = row.get("Style Number", "")
-            category = row.get("Product Category", "").strip().lower()
-            selected_attrs = select_applicable_attributes(tab_df, category, col_metadata)
-            selected_attrs["Style Number"] = style_number
-            output_rows.append(selected_attrs)
+            product_category = row.get("Product Category", "")
+            selected = select_attributes(product_category, col_info, df_values)
+            selected["Style Number"] = style_number
+            output_rows.append(selected)
 
-        all_columns = ["Style Number"] + sorted({meta["attr"] for meta in col_metadata.values() if meta["attr"]})
+        # Prepare columns from row 1, inserting 'Style Number' first
+        ordered_columns = ["Style Number"] + [c["name"] for c in col_info if c["name"]]
+
         final_df = pd.DataFrame(output_rows)
-
-        for col in all_columns:
+        for col in ordered_columns:
             if col not in final_df.columns:
                 final_df[col] = ""
+        final_df = final_df[ordered_columns].replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
 
-        final_df = final_df[all_columns].replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
+        # Remove Sheet1 if this is the first tab
+        if "Sheet1" in [s.title for s in spreadsheet.worksheets()]:
+            spreadsheet.del_worksheet(spreadsheet.worksheet("Sheet1"))
 
+        # Create new tab and upload data
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
-            sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="30")
+            sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="50")
 
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
