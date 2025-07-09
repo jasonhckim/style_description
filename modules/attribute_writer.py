@@ -44,14 +44,19 @@ def extract_allowed_columns(row):
     return allowed
 
 def select_values_for_category(df, category, allowed_columns):
-    values = {}
+    selected_values = {}
     for col, max_count in allowed_columns.items():
         if col not in df.columns:
             continue
-        candidates = df[col].dropna().unique().tolist()
-        selected = candidates[:max_count]  # TODO: Improve selection logic
-        values[col] = ", ".join(selected)
-    return values
+
+        col_values = df[col].dropna()
+        candidates = col_values.unique().tolist() if not col_values.empty else []
+
+        selected = candidates[:max_count]  # TODO: improve logic (e.g., prioritizing based on tags/keywords)
+        selected_values[col] = ", ".join(selected)
+        
+    return selected_values
+
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     from gspread import authorize
