@@ -8,6 +8,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 import os, json
+from modules.attribute_writer import write_marketplace_attribute_sheet
 
 # ✅ Load environment variables
 load_dotenv()
@@ -186,6 +187,9 @@ def process_pdf():
         write_marketplace_attribute_sheet(df, pdf_filename, creds, PDF_FOLDER_ID)
 
         print(f"✅ Finished processing {pdf_filename}")
-
+                # Generate marketplace attribute tabs ("faire", "fgo")
+        from modules.attribute_writer import write_marketplace_attribute_sheet
+        write_marketplace_attribute_sheet(df, pdf_filename, creds, PDF_FOLDER_ID)
+        
 if __name__ == "__main__":
     process_pdf()
