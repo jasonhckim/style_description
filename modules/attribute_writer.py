@@ -92,12 +92,17 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
         # Ensure all columns are present for consistency
         all_columns = ["Style Number"] + list(allowed_columns.keys())
         final_df = pd.DataFrame(output_rows)[all_columns]
-
+        
+        # ✅ Clean data: remove invalid float values and convert everything to strings
+        final_df = final_df.replace([float("inf"), float("-inf")], "")
+        final_df = final_df.fillna("")
+        final_df = final_df.astype(str)
+        
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
             sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="20")
-
+        
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
