@@ -5,6 +5,7 @@ import gspread
 from gspread_dataframe import get_as_dataframe
 from googleapiclient.discovery import build
 
+
 def download_marketplace_attributes(creds):
     sheet_id = "12lJYw9TL97djaPKjF3qKp-Bio-5sQmPbsprEvD4mERA"
     client = gspread.authorize(creds)
@@ -14,87 +15,88 @@ def download_marketplace_attributes(creds):
     for tab in ["faire", "fgo"]:
         worksheet = sheet.worksheet(tab)
         df = get_as_dataframe(worksheet, evaluate_formulas=True, header=0)
-        df.columns = df.columns.map(lambda c: "" if pd.isna(c) else str(c).strip())
-        df = df.dropna(how="all")
-        data[tab] = df.reset_index(drop=True)
+        data[tab] = df
 
     return data
 
-def parse_selection_limit(header):
-    match = re.search(r"\((\d+)\)", header)
+
+def parse_selection_limit(col_name):
+    match = re.search(r"\\((\\d+)\\)", col_name)
     return int(match.group(1)) if match else 1
 
-def normalize_text(text):
-    return re.sub(r"[^\w\s]", "", text).lower()
 
-def select_matching_values(text_blob, attr_values, limit):
-    matches = []
-    text_blob = normalize_text(text_blob)
-    for val in attr_values:
-        val_norm = normalize_text(str(val))
-        if val_norm in text_blob:
-            matches.append(val.strip())
-        if len(matches) >= limit:
-            break
-    return matches
+def extract_relevant_columns(df, product_type):
+    matched_columns = []
+    for col in df.columns:
+        if pd.isna(col):
+            continue
+        if ":" in col:
+            prefix, attr_name = map(str.strip, col.split(":", 1))
+            if prefix.lower() == product_type.lower() or prefix.lower() == "_global":
+                matched_columns.append((col, attr_name.strip()))
+    return matched_columns
+
+
+def select_attributes_from_sheet(df, relevant_columns):
+    result = {}
+    for full_col, attr_name in relevant_columns:
+        try:
+            col_series = df[full_col].dropna()
+            limit = parse_selection_limit(attr_name)
+            values = col_series.unique().tolist()
+            selected = values[:limit]
+            result[attr_name] = ", ".join(map(str, selected))
+        except Exception as e:
+            print(f"⚠️ Error processing column '{full_col}': {e}")
+            result[attr_name] = ""
+    return result
+
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
-    drive = build("drive", "v3", credentials=creds)
-    client = gspread.authorize(creds)
-
     marketplace_data = download_marketplace_attributes(creds)
+    client = gspread.authorize(creds)
+    drive = build("drive", "v3", credentials=creds)
+
     sheet_title = pdf_filename.replace(".pdf", " marketplace attribute")
     spreadsheet = client.create(sheet_title)
-    drive.files().update(fileId=spreadsheet.id, addParents=folder_id, removeParents="root").execute()
+    spreadsheet_id = spreadsheet.id
+    drive.files().update(fileId=spreadsheet_id, addParents=folder_id, removeParents="root").execute()
 
     for tab_name, tab_df in marketplace_data.items():
-        headers = tab_df.columns.tolist()
         output_rows = []
 
         for _, row in df.iterrows():
             style_number = row.get("Style Number", "")
-            product_type = (row.get("Product Type") or row.get("Product Category") or "").lower()
-            blob = " ".join([str(row.get(k, "")) for k in ["product_title", "description", "hashtags", "key_attribute"]])
+            product_type = row.get("Product Type", "") or row.get("Product Category", "")
+            if not product_type:
+                print(f"⚠️ Missing product_type for style {style_number}")
+                continue
 
-            attr_row = {"Style Number": style_number}
-            for col in headers:
-                col_clean = col.strip()
-                if not col_clean:
-                    continue
+            relevant_columns = extract_relevant_columns(tab_df, product_type)
+            attributes = select_attributes_from_sheet(tab_df, relevant_columns)
+            attributes["Style Number"] = style_number
+            output_rows.append(attributes)
 
-                # Detect scoped attribute like 'TOP: Sleeve Length (1)'
-                scoped = col_clean.split(":")
-                if len(scoped) == 2:
-                    scope, attr_name = scoped[0].strip().lower(), scoped[1].strip()
-                    if scope not in product_type:
-                        continue
-                else:
-                    attr_name = col_clean
-
-                values = tab_df[col].dropna().tolist()[1:]  # Skip row 1
-                limit = parse_selection_limit(attr_name)
-                matched = select_matching_values(blob, values, limit)
-                attr_row[col_clean] = ", ".join(matched)
-
-            output_rows.append(attr_row)
+        # Assemble DataFrame
+        all_keys = ["Style Number"] + sorted(
+            {attr for col in tab_df.columns if isinstance(col, str) and ":" in col
+             for prefix, attr in [col.split(":", 1)] if prefix.strip().lower() in [product_type.lower(), "_global"]}
+        )
 
         final_df = pd.DataFrame(output_rows)
+        for key in all_keys:
+            if key not in final_df.columns:
+                final_df[key] = ""
 
-        all_columns = ["Style Number"] + [col for col in headers if col.strip()]
-        for col in all_columns:
-            if col not in final_df.columns:
-                final_df[col] = ""
-
-        final_df = final_df[all_columns]
-        final_df = final_df.replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
+        final_df = final_df[all_keys].replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
 
         try:
             sheet = spreadsheet.worksheet(tab_name)
         except:
-            sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="30")
+            sheet = spreadsheet.add_worksheet(title=tab_name, rows="1000", cols="50")
 
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
-    print(f"✅ Marketplace sheet created: https://docs.google.com/spreadsheets/d/{spreadsheet.id}")
-    return spreadsheet.id
+    print(f"✅ Marketplace attribute sheet created: https://docs.google.com/spreadsheets/d/{spreadsheet_id}")
+    return spreadsheet_id
