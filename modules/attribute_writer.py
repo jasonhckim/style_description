@@ -5,26 +5,25 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
 
-def download_marketplace_attributes(creds, file_name="Marketplace_attributes.xlsx"):
-    # Find file in Drive folder
-    drive = build("drive", "v3", credentials=creds)
-    folder_id = "1YrYWjpWUmGN-ISJK0TrO66SirBsLeMcH"
-    query = f"'{folder_id}' in parents and name='{file_name}' and trashed = false"
-    results = drive.files().list(q=query, fields="files(id, name)").execute()
-    files = results.get("files", [])
-    if not files:
-        raise FileNotFoundError("Marketplace_attributes.xlsx not found in Drive folder")
+def download_marketplace_attributes(creds):
+    import gspread
+    from gspread_dataframe import get_as_dataframe
 
-    file_id = files[0]["id"]
-    request = drive.files().get_media(fileId=file_id)
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while not done:
-        status, done = downloader.next_chunk()
+    # Google Sheet ID of Marketplace_attributes
+    sheet_id = "12lJYw9TL97djaPKjF3qKp-Bio-5sQmPbsprEvD4mERA"
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(sheet_id)
 
-    fh.seek(0)
-    return pd.read_excel(fh, sheet_name=None)
+    data = {}
+    for tab in ["faire", "fgo"]:
+        worksheet = sheet.worksheet(tab)
+        df = get_as_dataframe(worksheet, evaluate_formulas=True, header=None)
+        df.columns = df.iloc[0]  # Promote first row as header
+        df = df[1:]              # Drop the row that became header
+        data[tab] = df.reset_index(drop=True)
+
+    return data
+
 
 def extract_allowed_columns(row):
     allowed = {}
