@@ -167,6 +167,19 @@ def process_pdf():
             "Keywords"
         ]
         df = df[column_order]
+                # ✅ Create creds to be reused below
+        try:
+            service_account_json = os.environ["GOOGLE_CREDENTIALS"]
+            info = json.loads(service_account_json)
+            creds = service_account.Credentials.from_service_account_info(
+                info,
+                scopes=SCOPES,
+                subject="jason@hyfve.com"
+            )
+            print("✅ Credentials validated (main.py:process_pdf)")
+        except Exception as e:
+            print(f"❌ FATAL: Credential failure: {e}")
+            continue
 
         upload_to_google_sheets(df, pdf_filename, PDF_FOLDER_ID)
         from modules.attribute_writer import write_marketplace_attribute_sheet
