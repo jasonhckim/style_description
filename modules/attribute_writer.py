@@ -105,10 +105,6 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
                 final_df[col] = ""
         final_df = final_df[ordered_columns].replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
 
-        # Remove Sheet1 if this is the first tab
-        if "Sheet1" in [s.title for s in spreadsheet.worksheets()]:
-            spreadsheet.del_worksheet(spreadsheet.worksheet("Sheet1"))
-
         # Create new tab and upload data
         try:
             sheet = spreadsheet.worksheet(tab_name)
@@ -117,6 +113,13 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
 
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
+
+    # ✅ Now delete "Sheet1" AFTER creating faire/fgo
+    try:
+        sheet1 = spreadsheet.worksheet("Sheet1")
+        spreadsheet.del_worksheet(sheet1)
+    except:
+        pass
 
     print(f"✅ Marketplace attribute sheet created: https://docs.google.com/spreadsheets/d/{spreadsheet_id}")
     return spreadsheet_id
