@@ -119,7 +119,7 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
                 product_description=row.get("Product Description", ""),
                 category=row.get("Product Category", ""),
                 col_info=col_info,
-                df_values=tab_df,
+                df_values=df_values,
                 style_number=row.get("Style Number", "")
             )
             output_rows.append(selected)
