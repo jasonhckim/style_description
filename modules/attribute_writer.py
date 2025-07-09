@@ -45,14 +45,18 @@ def select_values_for_category(df, col_indices):
     output_row = {}
     for col_idx, attr_name in col_indices:
         try:
-            col_series = df.iloc[2:, col_idx].dropna()
+            col_series = df.iloc[2:, col_idx]  # Row 3+ only
+            if not isinstance(col_series, pd.Series):
+                print(f\"⚠️ Skipping non-Series column {col_idx}\")
+                continue
+            col_series = col_series.dropna()
             limit = parse_selection_limit(attr_name)
             values = col_series.unique().tolist()
             selected = values[:limit]
-            output_row[attr_name] = ", ".join(selected)
+            output_row[attr_name] = \", \".join(selected)
         except Exception as e:
-            print(f"⚠️ Error processing column {col_idx} ({attr_name}): {e}")
-            output_row[attr_name] = ""
+            print(f\"⚠️ Error processing column {col_idx} ({attr_name}): {e}\")
+            output_row[attr_name] = \"\"
     return output_row
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
