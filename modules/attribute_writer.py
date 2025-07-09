@@ -115,11 +115,15 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
 
         output_rows = []
         for _, row in description_df.iterrows():
-            style_number = row.get("Style Number", "")
-            product_category = row.get("Product Category", "")
-            selected = select_attributes(product_category, col_info, df_values)
-            selected["Style Number"] = style_number
-            output_rows.append(selected)
+        selected = select_attributes(
+            product_description=row.get("Product Description", ""),
+            category=row.get("Product Category", ""),
+            col_info=col_info,
+            df_values=tab_df,
+            style_number=row.get("Style Number", "")
+        )
+        output_rows.append(selected)
+
 
         # Prepare columns from row 1, inserting 'Style Number' first
         ordered_columns = ["Style Number"] + [c["name"] for c in col_info if c["name"]]
