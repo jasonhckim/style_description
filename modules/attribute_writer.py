@@ -101,6 +101,7 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
         final_df = final_df[all_headers]  # Reorder columns
         
         # ✅ Clean JSON-invalid values: NaN, inf, -inf
+        final_df.columns = final_df.columns.map(lambda c: "" if pd.isna(c) else str(c))
         final_df = final_df.replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
         
         try:
