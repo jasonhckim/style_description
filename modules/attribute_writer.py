@@ -49,13 +49,17 @@ def select_values_for_category(df, category, allowed_columns):
         if col not in df.columns:
             continue
 
-        col_values = df[col].dropna()
-        candidates = col_values.unique().tolist() if not col_values.empty else []
+        try:
+            col_values = df[col].dropna()
+            candidates = col_values.unique().tolist() if not col_values.empty else []
+            selected = candidates[:max_count]
+            selected_values[col] = ", ".join(selected)
+        except Exception as e:
+            print(f"⚠️ Error processing column '{col}': {e}")
+            selected_values[col] = ""
 
-        selected = candidates[:max_count]  # TODO: improve logic (e.g., prioritizing based on tags/keywords)
-        selected_values[col] = ", ".join(selected)
-        
     return selected_values
+
 
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
