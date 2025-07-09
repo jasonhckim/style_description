@@ -48,19 +48,15 @@ def select_values_for_category(df, category, allowed_columns):
     for col, max_count in allowed_columns.items():
         if col not in df.columns:
             continue
-
         try:
-            col_values = df[col].dropna()
-            candidates = col_values.unique().tolist() if not col_values.empty else []
+            col_series = df[col].dropna()
+            candidates = col_series.unique().tolist() if not col_series.empty else []
             selected = candidates[:max_count]
             selected_values[col] = ", ".join(selected)
         except Exception as e:
             print(f"⚠️ Error processing column '{col}': {e}")
             selected_values[col] = ""
-
     return selected_values
-
-
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     from gspread import authorize
