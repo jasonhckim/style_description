@@ -89,7 +89,7 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
             if not col_indices:
                 print(f"⚠️ No attribute columns mapped for product_type='{product_type}' (Style: {style_number})")
 
-            selected_attrs = select_values_for_category(tab_df, col_indices)
+            selected_attrs = select_values_for_category(value_df, col_indices)
             selected_attrs["Style Number"] = style_number
             output_rows.append(selected_attrs)
 
@@ -102,11 +102,9 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
             if col not in final_df.columns:
                 final_df[col] = ""
 
-        final_df = final_df[all_headers]  # Reorder columns
-
-        # Normalize header and values for Google Sheets update
+        final_df = final_df[all_headers]
         final_df.columns = final_df.columns.map(lambda c: "" if pd.isna(c) else str(c))
-        final_df = final_df.replace([np.nan, float("inf"), float("-inf")], "").fillna("").astype(str)
+        final_df = final_df.replace([np.nan, np.inf, -np.inf], "").fillna("").astype(str)
 
         try:
             sheet = spreadsheet.worksheet(tab_name)
@@ -115,6 +113,7 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
 
         sheet.clear()
         sheet.update([final_df.columns.tolist()] + final_df.values.tolist())
+
 
     print(f"✅ Marketplace attribute sheet created: https://docs.google.com/spreadsheets/d/{spreadsheet_id}")
     return spreadsheet_id
