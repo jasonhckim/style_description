@@ -188,8 +188,6 @@ def process_pdf():
 
         print(f"✅ Finished processing {pdf_filename}")
                 # Generate marketplace attribute tabs ("faire", "fgo")
-        from modules.attribute_writer import write_marketplace_attribute_sheet
-        write_marketplace_attribute_sheet(df, pdf_filename, creds, PDF_FOLDER_ID)
-        
+                
 if __name__ == "__main__":
     process_pdf()
