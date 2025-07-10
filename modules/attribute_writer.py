@@ -66,6 +66,7 @@ def is_column_applicable(col_meta, product_category):
 # Use GPT to select appropriate values for each attribute field
 def select_attributes_from_ai(product_description, category, style_number, flat_attributes):
     output = {"Style Number": style_number}
+    
     for attr_key, values in flat_attributes.items():
         col_meta = parse_column_metadata(attr_key)
         if not is_column_applicable(col_meta, category):
@@ -73,6 +74,7 @@ def select_attributes_from_ai(product_description, category, style_number, flat_
         if not values:
             continue
 
+        # ✏️ Compose base prompt
         prompt = f"""
 You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
 
@@ -81,9 +83,19 @@ Category: {category}
 Description: {product_description}
 
 Select from: {values}
-NOTE: If this prompt is for **Color (1)**, you may infer the dominant color from the description, image, or known style behavior — but this color must NOT be added to the product title or description.
-Respond with a comma-separated string of the best matching values, or empty if none apply.
 """
+
+        # 🧠 Extra logic if it's a color column
+        if col_meta["original"] == "Color (1)":
+            prompt += """
+NOTE: You may infer color from the visual appearance of the garment or subtle hints in the product description or style number.
+Only choose **one dominant color** that most likely matches the item's visual identity.
+
+DO NOT mention or guess the color in product titles or descriptions — this selection is used only for backend tagging.
+"""
+
+        prompt += "\nRespond with a comma-separated string of the best matching values, or empty if none apply."
+
         try:
             from openai import OpenAI
             client = OpenAI()
@@ -94,13 +106,15 @@ Respond with a comma-separated string of the best matching values, or empty if n
                 temperature=0.3
             )
             answer = response.choices[0].message.content.strip()
-            output[col_meta["original"]] = answer
+            cleaned = answer.replace("None", "").replace("Empty", "")
+            output[col_meta["original"]] = cleaned
 
         except Exception as e:
             print(f"⚠️ OpenAI error for {col_meta['original']}: {e}")
             output[col_meta["original"]] = ""
 
     return output
+
 
 
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
