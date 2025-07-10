@@ -2,28 +2,25 @@ import pandas as pd
 import re
 import os
 import json
-import openai
 import numpy as np
-from googleapiclient.discovery import build
 import gspread
+from googleapiclient.discovery import build
 
-# Load attributes from JSON
+# ✅ Load attribute data from JSON file
 def load_flat_attributes(path="config/marketplace_attributes.json"):
     with open(path, "r") as f:
         return json.load(f)
 
-# Extract attribute metadata (limit, prefix/category) from column name
+# ✅ Parse column name to get prefix and limit
 def parse_column_metadata(attr_name):
     prefix = None
     limit = 1
     original = attr_name
 
-    # Extract selection limit
     match = re.search(r"\((\d+)\)", attr_name)
     if match:
         limit = int(match.group(1))
 
-    # Extract prefix like "TOP:", "DRESS:"
     if ":" in attr_name:
         parts = attr_name.split(":", 1)
         prefix = parts[0].strip().lower()
@@ -36,15 +33,13 @@ def parse_column_metadata(attr_name):
         "limit": limit
     }
 
-# Map which columns apply based on product category
+# ✅ Determine if this attribute applies to the product category
 def is_column_applicable(col_meta, category):
     if not col_meta["prefix"]:
-        return True  # No prefix = always apply
+        return True  # No prefix = always applicable
     category = category.lower()
-    
     prefix = col_meta["prefix"].lower()
 
-    # Smart matching: "TOP" → applies to category "top", "tops", etc.
     category_keywords = {
         "top": ["top", "tops", "blouse", "cami", "shirt", "sweater"],
         "pants": ["pants", "bottom", "trousers"],
@@ -58,21 +53,23 @@ def is_column_applicable(col_meta, category):
         if prefix.startswith(key) and any(word in category for word in aliases):
             return True
 
-    return False  # Not a matching prefix
+    return False
 
-
-# Use GPT to select appropriate values for each attribute field
+# ✅ AI attribute selector
 def select_attributes_from_ai(product_description, category, style_number, flat_attributes):
     output = {"Style Number": style_number}
-    
+
+    from openai import OpenAI
+    client = OpenAI()
+
     for attr_key, values in flat_attributes.items():
         col_meta = parse_column_metadata(attr_key)
+
         if not is_column_applicable(col_meta, category):
             continue
         if not values:
             continue
 
-        # ✏️ Compose base prompt
         prompt = f"""
 You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
 
@@ -83,28 +80,13 @@ Description: {product_description}
 Select from: {values}
 """
 
-        # 🧠 Extra logic if it's a color column
-        prompt = f"""
-You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
-
-Style Number: {style_number}
-Category: {category}
-Description: {product_description}
-
-Select from: {values}
+        if col_meta["original"] == "Color (1)":
+            prompt += """
+NOTE: You may infer color from the image or product context — but DO NOT mention or invent it in title or description.
+Only return the most likely dominant color. Leave blank if uncertain.
 """
-
-if col_meta["original"] == "Color (1)":
-    prompt += """
-NOTE: You may infer color from the image or known fashion norms, but DO NOT assume. If no color clues exist, leave it blank.
-This color is used only for backend tagging — NEVER include it in titles or descriptions.
-"""
-
 
         try:
-            from openai import OpenAI
-            client = OpenAI()
-
             response = client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[{"role": "user", "content": prompt}],
@@ -120,21 +102,16 @@ This color is used only for backend tagging — NEVER include it in titles or de
 
     return output
 
-
-
+# ✅ Write marketplace sheet (faire + fgo)
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
-    # Load from JSON
     flat_attributes = load_flat_attributes()
-
     drive = build("drive", "v3", credentials=creds)
     client = gspread.authorize(creds)
 
-    # Create spreadsheet
     spreadsheet = client.create(pdf_filename.replace(".pdf", " marketplace attribute"))
     spreadsheet_id = spreadsheet.id
     drive.files().update(fileId=spreadsheet_id, addParents=folder_id, removeParents="root").execute()
 
-    # Create both faire and fgo tabs
     for tab_name in ["faire", "fgo"]:
         output_rows = []
         for _, row in description_df.iterrows():
@@ -146,9 +123,7 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
             )
             output_rows.append(selected)
 
-        # Build column list from JSON keys
         all_columns = ["Style Number"] + list(flat_attributes.keys())
-
         final_df = pd.DataFrame(output_rows)
         for col in all_columns:
             if col not in final_df.columns:
@@ -163,7 +138,7 @@ def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folde
         worksheet.clear()
         worksheet.update([final_df.columns.tolist()] + final_df.values.tolist())
 
-    # Remove default Sheet1
+    # ✅ Clean up default Sheet1
     try:
         sheet1 = spreadsheet.worksheet("Sheet1")
         spreadsheet.del_worksheet(sheet1)
