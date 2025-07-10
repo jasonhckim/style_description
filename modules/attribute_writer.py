@@ -79,17 +79,23 @@ Select from: {values}
 Respond with a comma-separated string of the best matching values, or empty if none apply.
 """
         try:
-            response = openai.ChatCompletion.create(
+            from openai import OpenAI
+            client = OpenAI()
+
+            response = client.chat.completions.create(
                 model="gpt-4-turbo",
-                temperature=0.2,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
             )
-            result = response.choices[0].message.content.strip()
-            output[col_meta["original"]] = result
+            answer = response.choices[0].message.content.strip()
+            output[col_meta["original"]] = answer
+
         except Exception as e:
             print(f"⚠️ OpenAI error for {col_meta['original']}: {e}")
             output[col_meta["original"]] = ""
+
     return output
+
 
 def write_marketplace_attribute_sheet(description_df, pdf_filename, creds, folder_id):
     # Load from JSON
