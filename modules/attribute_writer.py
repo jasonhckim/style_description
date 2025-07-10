@@ -75,7 +75,7 @@ Category: {category}
 Description: {product_description}
 
 Select from: {values}
-
+NOTE: If this prompt is for **Color (1)**, you may infer the dominant color from the description, image, or known style behavior — but this color must NOT be added to the product title or description.
 Respond with a comma-separated string of the best matching values, or empty if none apply.
 """
         try:
