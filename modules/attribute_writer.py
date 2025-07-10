@@ -37,30 +37,28 @@ def parse_column_metadata(attr_name):
     }
 
 # Map which columns apply based on product category
-def is_column_applicable(col_meta, product_category):
-    """
-    Only allow columns that match the category prefix, or are general.
-    """
+def is_column_applicable(col_meta, category):
     if not col_meta["prefix"]:
-        return True  # General use column (e.g., "Color", "Pattern")
-
-    category = product_category.lower()
+        return True  # No prefix = always apply
+    category = category.lower()
+    
     prefix = col_meta["prefix"].lower()
 
-    CATEGORY_ALIASES = {
-        "top": ["top", "blouse", "shirt", "camisole", "pullover"],
-        "bottom": ["bottom", "pants", "trousers", "shorts"],
-        "dress": ["dress"],
-        "skirt": ["skirt"],
-        "outerwear": ["jacket", "coat", "outerwear", "vest", "puffer"],
-        "hoodie": ["hoodie", "sweatshirt"],
+    # Smart matching: "TOP" → applies to category "top", "tops", etc.
+    category_keywords = {
+        "top": ["top", "tops", "blouse", "cami", "shirt", "sweater"],
+        "pants": ["pants", "bottom", "trousers"],
+        "shorts": ["shorts", "bottom"],
+        "dress": ["dress", "dresses"],
+        "skirt": ["skirt", "skirts"],
+        "hoodie": ["hoodie", "sweatshirt", "jacket", "outerwear"]
     }
 
-    for key, values in CATEGORY_ALIASES.items():
-        if prefix == key and any(val in category for val in values):
+    for key, aliases in category_keywords.items():
+        if prefix.startswith(key) and any(word in category for word in aliases):
             return True
 
-    return False
+    return False  # Not a matching prefix
 
 
 # Use GPT to select appropriate values for each attribute field
