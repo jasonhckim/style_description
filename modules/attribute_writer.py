@@ -84,15 +84,22 @@ Select from: {values}
 """
 
         # 🧠 Extra logic if it's a color column
-        if col_meta["original"] == "Color (1)":
-            prompt += """
-NOTE: You may infer color from the visual appearance of the garment or subtle hints in the product description or style number.
-Only choose **one dominant color** that most likely matches the item's visual identity.
+        prompt = f"""
+You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
 
-DO NOT mention or guess the color in product titles or descriptions — this selection is used only for backend tagging.
+Style Number: {style_number}
+Category: {category}
+Description: {product_description}
+
+Select from: {values}
 """
 
-        prompt += "\nRespond with a comma-separated string of the best matching values, or empty if none apply."
+if col_meta["original"] == "Color (1)":
+    prompt += """
+NOTE: You may infer color from the image or known fashion norms, but DO NOT assume. If no color clues exist, leave it blank.
+This color is used only for backend tagging — NEVER include it in titles or descriptions.
+"""
+
 
         try:
             from openai import OpenAI
