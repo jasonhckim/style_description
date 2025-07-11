@@ -56,6 +56,7 @@ def is_column_applicable(col_meta, category):
     return False
 
 # ✅ AI attribute selector
+# ✅ AI attribute selector
 def select_attributes_from_ai(product_description, category, style_number, flat_attributes):
     output = {"Style Number": style_number}
 
@@ -70,6 +71,7 @@ def select_attributes_from_ai(product_description, category, style_number, flat_
         if not values:
             continue
 
+        select_from = ", ".join(values[:10]) + ("..." if len(values) > 10 else "")
         prompt = f"""
 You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
 
@@ -77,7 +79,7 @@ Style Number: {style_number}
 Category: {category}
 Description: {product_description}
 
-Select from: {values}
+Select from: {select_from}
 """
 
         if col_meta["original"] == "Color (1)":
