@@ -45,7 +45,30 @@ generate_description_prompt: |
   - The **product title must be exactly 40 characters**, no more, no less.
   - The **description must be under 300 characters** – engaging, vivid, and practical.
 
-  {set_text}
+  - 🧠 In addition to generating the title and description, select the most applicable **product attributes** based on the values below.
+    - Only choose values that can be confidently inferred from the provided text or images.
+    - Use exact keys like `"color"`, `"neckline"`, `"dress_style"`, etc.
+
+  **Available attributes**:
+  - color
+  - aesthetic
+  - embellishment
+  - neckline
+  - occasion
+  - occasion_theme
+  - pattern
+  - product_language
+  - season
+  - sleeve_length
+  - theme
+  - pants_length
+  - shorts_length
+  - shorts_style
+  - shorts_rise_style
+  - dress_style
+  - dress_length
+  - skirt_style
+  - hoodie_application_type
 
   **Respond in JSON format like this:**
   {{
@@ -54,5 +77,10 @@ generate_description_prompt: |
       "hashtags": ["#fashion", "#trendy", "#style", "#event", "#holiday", "#details"],
       "product_category": "Category name",
       "product_type": "Set" if applicable, else "A short noun like 'Cami', 'Blouse', 'Sweatpants', 'Pullover', 'Mini Skirt', or 'Puffer Vest' that best describes the garment type based on visible features and silhouette.",
-      "key_attribute": "One defining visible feature"
+      "key_attribute": "One defining visible feature",
+      "attributes": {{
+          "color": "value or list",
+          "pattern": "value or list",
+          ...
+      }}
   }}
