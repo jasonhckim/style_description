@@ -1,4 +1,4 @@
-{
+flat_attribute_data = {
   "Color (1)": ["Beige", "Black", "Blue", "Bronze", "Brown", "Burgundy", "Clear", "Gold", "Gray", "Green", "Multi-Colored", "Off-White", "Orange", "Pink", "Purple", "Red", "Rose Gold", "Silver", "White", "Yellow"],
   "Aesthetic (2)": ["Bohemian", "Casual", "Classic", "Glam", "Gothic", "Grunge", "Minimalist", "Outdoor", "Preppy", "Retro/vintage", "Romantic/whimsical", "Streetwear", "Western", "Quilted", "Ribbon", "Ruffles", "Sequined", "Studded", "Tassels", "V-neck"],
   "Embellishment": ["Beaded", "Broderie", "Cable Knit", "Embossed", "Embroidered", "Fringe", "Fur Trim", "Jeweled", "Lace", "Pearled", "Piping", "Pleat", "Pom Pom", "Quilted", "Ribbon", "Ruffles", "Sequined", "Studded", "Tassels"],
