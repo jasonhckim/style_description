@@ -1,7 +1,7 @@
-from config.marketplace_attributes_data import flat_attribute_data  # step 1
+from config.marketplace_attributes_data import flat_attribute_data
 from openai import OpenAI
 import gspread
-from modules.utils import copy_template_sheet
+from modules.utils import copy_template_sheet, get_env_variable
 
 def get_sheet_headers(attribute_dict):
     return ["Style Number"] + list(attribute_dict.keys())
@@ -18,8 +18,8 @@ def format_attribute_row(style_number, selected_attrs, attribute_dict):
 
 def select_attributes_from_ai(product_title, description, category):
     import openai
+    import json
 
-    # Debug: Show top 10 options (fix TypeError here)
     preview_dict = {
         k: ", ".join(v[:10]) + ("..." if len(v) > 10 else "")
         for k, v in flat_attribute_data.items()
@@ -50,18 +50,17 @@ Only return fields where a value should be selected.
 
     try:
         content = response.choices[0].message.content
-        return eval(content.strip())  # you may replace this with json.loads() if the output is strict JSON
+        return json.loads(content.strip())
     except Exception as e:
         print("⚠️ Error parsing OpenAI response:", e)
         return {}
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     import os
-    from modules.utils import copy_template_sheet
+
     template_id = get_env_variable("MARKETPLACE_TEMPLATE_ID")
     new_title = f"Marketplace - {pdf_filename}"
 
-    # ✅ Correct usage
     new_sheet_id = copy_template_sheet(creds, template_id, new_title)
     new_sheet_url = f"https://docs.google.com/spreadsheets/d/{new_sheet_id}"
 
