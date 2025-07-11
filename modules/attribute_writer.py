@@ -4,7 +4,7 @@ import json
 import os
 from modules.utils import get_env_variable
 
-# ✅ Key-to-column label mapping based on your final confirmed structure
+# ✅ Attribute mapping from your official config
 ATTRIBUTE_MAPPING = {
     "color": "Color (1)",
     "aesthetic": "Aesthetic (2)",
@@ -27,7 +27,6 @@ ATTRIBUTE_MAPPING = {
     "hoodie_application_type": "Hoodie: Application Type"
 }
 
-# ✅ Final header structure for marketplace sheet
 HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
 def format_attribute_row(style_number, selected_attrs):
@@ -76,16 +75,14 @@ Each value must be a string or a list of strings.
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
-    sheet_name = pdf_filename.replace(".pdf", "")
-    sh = gc.create(f"Marketplace - {sheet_name}", folder_id)
+    title = pdf_filename.replace(".pdf", "").strip()
+    sh = gc.create(f"Marketplace - {title}", folder_id)
     ws = sh.sheet1
     ws.update_title("faire")
 
-    # Normalize column names
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     print("📊 Normalized columns:", df.columns.tolist())
 
-    # Write headers once
     ws.update("A1", [HEADERS])
 
     all_rows = []
