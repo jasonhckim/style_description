@@ -1,4 +1,4 @@
-from modules.marketplace_attributes_data import flat_attribute_data  # step 1
+from config.marketplace_attributes_data import flat_attribute_data  # step 1
 from openai import OpenAI
 import gspread
 
