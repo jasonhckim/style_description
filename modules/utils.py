@@ -5,7 +5,20 @@ import re
 from PIL import Image
 import uuid
 import os
+from googleapiclient.discovery import build
+from google.oauth2.service_account import Credentials
 
+def copy_template_sheet(creds, template_id, new_title):
+    service = build("drive", "v3", credentials=creds)
+    copied_file = {
+        "name": new_title
+    }
+    new_sheet = service.files().copy(
+        fileId=template_id,
+        body=copied_file
+    ).execute()
+    return new_sheet["id"]
+    
 def save_image_temp(image_obj):
     """Save a PIL Image to a temporary file and return the path."""
     temp_dir = "/tmp" if os.name != "nt" else os.environ.get("TEMP", ".")
