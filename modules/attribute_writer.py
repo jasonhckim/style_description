@@ -76,7 +76,8 @@ Each value must be a string or a list of strings.
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
-    sh = gc.create(f"Marketplace - {pdf_filename}", folder_id)
+    sheet_name = pdf_filename.replace(".pdf", "")
+    sh = gc.create(f"Marketplace - {sheet_name}", folder_id)
     ws = sh.sheet1
     ws.update_title("faire")
 
