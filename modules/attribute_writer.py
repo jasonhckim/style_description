@@ -4,31 +4,48 @@ import json
 import os
 from modules.utils import get_env_variable
 
-# ✅ All supported marketplace attributes (manually defined once)
-ALL_ATTRIBUTE_COLUMNS = [
-    "Color (1)", "Aesthetic (2)", "Embellishment", "Neckline (1)", "Occasion (2)",
-    "Occasion Theme (3)", "Pattern (1)", "Product Language", "Season",
-    "TOP: Sleeve Length (1)", "Pants Length", "Shorts Length", "Shorts Style",
-    "Shorts: *Rise Style", "Dress Style", "Dress: Skirt & Dress Length",
-    "Skirt Style", "Hoodie: Application Type", "Theme"
-]
+# ✅ Key-to-column label mapping based on your original JSON structure
+ATTRIBUTE_MAPPING = {
+    "color": "Color (1)",
+    "aesthetic": "Aesthetic (2)",
+    "embellishment": "Embellishment",
+    "neckline": "Neckline (1)",
+    "occasion": "Occasion (2)",
+    "occasion_theme": "Occasion Theme (3)",
+    "pattern": "Pattern (1)",
+    "product_language": "Product Language",
+    "season": "Season",
+    "sleeve_length": "TOP: Sleeve Length (1)",
+    "theme": "Theme",
+    "pants_length": "Pants Length",
+    "shorts_length": "Shorts Length",
+    "shorts_style": "Shorts Style",
+    "shorts_rise_style": "Shorts: *Rise Style",
+    "dress_style": "Dress Style",
+    "dress_length": "Dress: Skirt & Dress Length",
+    "skirt_style": "Skirt Style",
+    "hoodie_application_type": "Hoodie: Application Type"
+}
 
-HEADERS = ["Style Number"] + ALL_ATTRIBUTE_COLUMNS
+HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
 def format_attribute_row(style_number, selected_attrs):
-    """Map selected AI attributes to fixed columns"""
-    row = [style_number]
-    for col in ALL_ATTRIBUTE_COLUMNS:
-        value = selected_attrs.get(col.lower(), "")  # match lowercase keys
-        if isinstance(value, list):
-            row.append(", ".join(value))
-        else:
-            row.append(value)
+    """Map selected AI attributes to fixed column layout"""
+    row = [""] * len(HEADERS)
+    row[0] = style_number  # "Style Number" is always first
+
+    for attr_key, value in selected_attrs.items():
+        column_name = ATTRIBUTE_MAPPING.get(attr_key.lower())
+        if column_name and column_name in HEADERS:
+            index = HEADERS.index(column_name)
+            val = ", ".join(value) if isinstance(value, list) else value
+            row[index] = val
+
     return row
 
 def select_attributes_from_ai(product_title, description):
-    # Provide all possible attributes to the AI
-    preview = "\n".join([f"- {col}" for col in ALL_ATTRIBUTE_COLUMNS])
+    # Show attribute keys to AI (not full column names)
+    preview = "\n".join([f"- {key}" for key in ATTRIBUTE_MAPPING.keys()])
 
     prompt = f"""
 You're assigning marketplace attributes to the product below.
@@ -39,15 +56,16 @@ Description: {description}
 Here is the list of all possible attributes:
 {preview}
 
-Return a JSON where keys exactly match the lowercase version of the attribute labels (e.g., "color (1)", "pattern (1)"), and values are strings or lists of strings.
-Only include relevant keys.
+Return a JSON object using these attribute keys (e.g., "color", "pattern") as keys.
+Values should be a string or list of strings.
+Only include attributes that apply.
 """
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant selecting product attributes."},
+                {"role": "system", "content": "You are a helpful assistant selecting product attributes for fashion listings."},
                 {"role": "user", "content": prompt}
             ]
         )
