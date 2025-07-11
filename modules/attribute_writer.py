@@ -66,7 +66,6 @@ Only include attributes that apply.
             ]
         )
         content = response.choices[0].message.content.strip()
-
         return json.loads(content)
     except Exception as e:
         print("⚠️ Error parsing OpenAI response:", e)
@@ -76,26 +75,35 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
     sh = gc.create(f"Marketplace - {pdf_filename}", folder_id)
     ws = sh.sheet1
-    ws.update_title("faire")  # default tab
+    ws.update_title("faire")
+
+    # ✅ Normalize column names
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    print("📊 Normalized columns:", df.columns.tolist())
 
     all_rows = []
     first_row_headers = None
 
     for _, row in df.iterrows():
-        style_number = row["Style Number"]
-        title = row["product_title"]
-        desc = row["description"]
-        category = row.get("product_category", row.get("product_type", "Unknown"))
+        try:
+            style_number = row["style_number"]
+            title = row["product_title"]
+            desc = row["product_description"]
+            category = row.get("product_category", row.get("product_type", "unknown"))
 
-        headers, attribute_keys = get_headers_for_category(category, flat_attribute_data)
+            headers, attribute_keys = get_headers_for_category(category, flat_attribute_data)
 
-        if first_row_headers is None:
-            first_row_headers = headers
-            ws.update("A1", [headers])  # Set headers once
+            if first_row_headers is None:
+                first_row_headers = headers
+                ws.update("A1", [headers])  # Set headers once
 
-        selected_attrs = select_attributes_from_ai(title, desc, category, attribute_keys, flat_attribute_data)
-        row_data = format_attribute_row(style_number, selected_attrs, attribute_keys, flat_attribute_data)
-        all_rows.append(row_data)
+            selected_attrs = select_attributes_from_ai(title, desc, category, attribute_keys, flat_attribute_data)
+            row_data = format_attribute_row(style_number, selected_attrs, attribute_keys, flat_attribute_data)
+            all_rows.append(row_data)
+
+        except KeyError as e:
+            print(f"⚠️ Skipping row due to missing key: {e}")
+            continue
 
     if all_rows:
         ws.append_rows(all_rows, value_input_option="USER_ENTERED")
