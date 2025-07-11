@@ -71,7 +71,8 @@ def select_attributes_from_ai(product_description, category, style_number, flat_
         if not values:
             continue
 
-        select_from = ", ".join(values[:10]) + ("..." if len(values) > 10 else "")
+        select_from = ", ".join(list(values)[:10]) + ("..." if len(values) > 10 else "")
+
         prompt = f"""
 You are a fashion merchandising assistant. Based on the clothing item below, select up to {col_meta["limit"]} attributes from the provided list.
 
