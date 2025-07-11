@@ -1,6 +1,7 @@
 from config.marketplace_attributes_data import flat_attribute_data  # step 1
 from openai import OpenAI
 import gspread
+from modules.utils import copy_template_sheet
 
 def get_sheet_headers(attribute_dict):
     return ["Style Number"] + list(attribute_dict.keys())
@@ -57,9 +58,14 @@ Only return fields where a value should be selected.
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     import os
     from modules.utils import copy_template_sheet
+    template_id = get_env_variable("MARKETPLACE_TEMPLATE_ID")
+    new_title = f"Marketplace - {pdf_filename}"
+
+    # ✅ Correct usage
+    new_sheet_id = copy_template_sheet(creds, template_id, new_title)
+    new_sheet_url = f"https://docs.google.com/spreadsheets/d/{new_sheet_id}"
 
     gc = gspread.authorize(creds)
-    new_sheet_url = copy_template_sheet(pdf_filename, folder_id)
     sh = gc.open_by_url(new_sheet_url)
     main_ws = sh.worksheet("faire")  # or “fgo” based on use
 
