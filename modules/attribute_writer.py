@@ -4,8 +4,9 @@ import json
 import os
 from modules.utils import get_env_variable
 
-# ✅ Attribute mapping from your official config
+# ✅ Unified attribute map from config/marketplace_attributes.json
 ATTRIBUTE_MAPPING = {
+    # core_attributes
     "color": "Color (1)",
     "aesthetic": "Aesthetic (2)",
     "embellishment": "Embellishment",
@@ -17,6 +18,8 @@ ATTRIBUTE_MAPPING = {
     "season": "Season",
     "sleeve_length": "TOP: Sleeve Length (1)",
     "theme": "Theme",
+
+    # product_specific
     "pants_length": "Pants Length",
     "shorts_length": "Shorts Length",
     "shorts_style": "Shorts Style",
@@ -55,8 +58,7 @@ Description: {description}
 Choose values for only applicable attributes below:
 {attr_preview}
 
-Return a JSON object with keys exactly matching the list above (e.g., \"color\", \"pattern\").
-Each value must be a string or a list of strings.
+Return a JSON object using only these keys. Each value must be a string or a list of strings.
 """
 
     try:
