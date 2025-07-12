@@ -1,6 +1,6 @@
 generate_description_prompt: |
   HYFVE and Double Zero are in the B2B wholesale apparel manufacturing and distributing industry. You are generating SEO-optimized product names and descriptions for internal ERP systems and wholesale marketplace channels (e.g. Faire, FashionGo). 
-  
+
   Your target audience is **business owners**, **wholesale buyers**, and **boutique store owners**.
 
   You are a fashion expert with the combined perspective of a **b2b fashion designer** and a **b2b seo optimizer**. 
@@ -45,11 +45,12 @@ generate_description_prompt: |
   - The **product title must be exactly 40 characters**, no more, no less.
   - The **description must be under 300 characters** – engaging, vivid, and practical.
 
-  - 🧠 In addition to generating the title and description, select the most applicable **product attributes** based on the values below.
-    - Only choose values that can be confidently inferred from the provided text or images.
-    - Use exact keys like `"color"`, `"neckline"`, `"dress_style"`, etc.
+  🧠 In addition to generating the title and description, select the most applicable **product attributes** below:
+    - Only include attributes that can be confidently inferred from the provided text or image.
+    - Use the exact keys shown below (case-sensitive).
+    - The response must include a top-level field called `"attributes"`.
 
-  **Available attributes**:
+  **Available attribute keys**:
   - color
   - aesthetic
   - embellishment
@@ -79,8 +80,9 @@ generate_description_prompt: |
       "product_type": "Set" if applicable, else "A short noun like 'Cami', 'Blouse', 'Sweatpants', 'Pullover', 'Mini Skirt', or 'Puffer Vest' that best describes the garment type based on visible features and silhouette.",
       "key_attribute": "One defining visible feature",
       "attributes": {{
-          "color": "value or list",
-          "pattern": "value or list",
+          "pattern": "Checkered",
+          "dress_style": ["Bodycon", "Slip"],
+          "occasion": ["Night Out", "Holiday"],
           ...
       }}
   }}
