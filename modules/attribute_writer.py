@@ -32,6 +32,7 @@ ATTRIBUTE_MAPPING = {
 
 HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
+
 def format_attribute_row(style_number, selected_attrs):
     row = ["" for _ in HEADERS]
     row[0] = style_number
@@ -44,6 +45,9 @@ def format_attribute_row(style_number, selected_attrs):
             row[index] = val
 
     return row
+
+from openai import OpenAI
+client = OpenAI()
 
 def select_attributes_from_ai(product_title, description):
     attr_keys = list(ATTRIBUTE_MAPPING.keys())
@@ -62,7 +66,7 @@ Return a JSON object using only these keys. Each value must be a string or a lis
 """
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": "You are a fashion assistant helping map products to their attributes."},
