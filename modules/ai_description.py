@@ -57,12 +57,19 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
 
             # ✅ Print OpenAI response
             raw_text = response.choices[0].message.content.strip()
-            print(f"\n🔍 DEBUG: OpenAI Response for {style_number}: {response}")
 
-            # ✅ Remove Markdown-style code blocks (```json ... ```)
-            if raw_text.startswith("```json"):
-                raw_text = raw_text[7:-3].strip()  # Remove ```json at start and ``` at end
-                
+            # ✅ Sanitize markdown-wrapped response like ```json\n...\n```
+            try:
+                # Extract the first {...} JSON block
+                match = re.search(r"\{[\s\S]*\}", raw_text)
+                if match:
+                    raw_text = match.group(0)
+                else:
+                    raise ValueError("No JSON object found in response.")
+            except Exception as e:
+                print(f"❌ ERROR extracting JSON for {style_number}: {e}")
+                continue  # Skip to next retry
+
             parsed_data = json.loads(raw_text)
 
             # ✅ Clean fields to prevent formatting issues
