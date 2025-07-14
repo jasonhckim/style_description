@@ -14,7 +14,7 @@ ATTRIBUTE_MAPPING = {
     "occasion": "Occasion (2)",
     "occasion_theme": "Occasion Theme (3)",
     "pattern": "Pattern (1)",
-    "product_language": "Product Language",
+    "product_language": "Product Language",color
     "season": "Season",
     "sleeve_length": "TOP: Sleeve Length (1)",
     "theme": "Theme",
@@ -59,40 +59,41 @@ def format_attribute_row(style_number, selected_attrs):
     return row
 
 def select_attributes_from_ai(product_title, description):
-    attr_keys = list(ATTRIBUTE_MAPPING.keys())
-    attr_preview = "\n".join([f"- {k}" for k in attr_keys])
+    attr_constraints = {
+        "color": 1,
+        "aesthetic": 2,
+        "embellishment": 1,
+        "neckline": 1,
+        "occasion": 2,
+        "occasion_theme": 3,
+        "pattern": 1,
+        "product_language": 1,
+        "season": 1,
+        "theme": 1
+    }
 
-    mandatory_preview = "\n".join([f"- {k} (at least {v})" for k, v in MANDATORY_KEYS.items()])
+    attr_instructions = "\n".join([
+        f"- {key}: return exactly {count} value(s)" for key, count in attr_constraints.items()
+    ])
 
     prompt = f"""
-You're assigning marketplace attributes to a fashion product.
+You're selecting marketplace attributes for the product below.
 
 Product Title: {product_title}
 Description: {description}
 
-Choose values for ALL mandatory attributes:
-{mandatory_preview}
+MANDATORY — Provide values for all of the following attributes:
+{attr_instructions}
 
-You may also include values for these optional attributes:
-{attr_preview}
+Use exact keys (e.g. "color", "pattern", etc). Return each value as a string or list of strings.
 
-Only use attribute keys exactly as listed. Return a JSON object where each key is from the list above and each value is a string or list of strings.
-Ensure list length matches minimum where indicated.
+Respond ONLY with a JSON object using this format:
+{{
+  "color": ["..."],
+  "aesthetic": ["...", "..."],
+  ...
+}}
 """
-
-    try:
-        response = openai.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": "You are a fashion assistant helping map products to their attributes."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        content = response.choices[0].message.content.strip()
-        return json.loads(content)
-    except Exception as e:
-        print(f"⚠️ Error parsing AI response: {e}")
-        return {}
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
