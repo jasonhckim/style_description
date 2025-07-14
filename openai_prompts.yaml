@@ -45,44 +45,53 @@ generate_description_prompt: |
   - The **product title must be exactly 40 characters**, no more, no less.
   - The **description must be under 300 characters** – engaging, vivid, and practical.
 
-  🧠 In addition to generating the title and description, select the most applicable **product attributes** below:
-    - Only include attributes that can be confidently inferred from the provided text or image.
-    - Use the exact keys shown below (case-sensitive).
-    - The response must include a top-level field called `"attributes"`.
+  🧠 In addition to generating the title and description, you must select the most applicable **product attributes** below:
+  - Use the exact keys shown below (case-sensitive).
+  - The response **must** include a top-level `"attributes"` field.
+  - Include **all of the following 10 required attributes**:
+    - color (1 value)
+    - aesthetic (2 values)
+    - embellishment (1 value)
+    - neckline (1 value)
+    - occasion (2 values)
+    - occasion_theme (3 values)
+    - pattern (1 value)
+    - product_language (1 value)
+    - season (1 value)
+    - theme (1 value)
 
-  **Available attribute keys**:
-  - color
-  - aesthetic
-  - embellishment
-  - neckline
-  - occasion
-  - occasion_theme
-  - pattern
-  - product_language
-  - season
-  - sleeve_length
-  - theme
-  - pants_length
-  - shorts_length
-  - shorts_style
-  - shorts_rise_style
-  - dress_style
-  - dress_length
-  - skirt_style
-  - hoodie_application_type
+  - Optional: Include any of the following **product-specific** attributes if applicable:
+    - pants_length
+    - shorts_length
+    - shorts_style
+    - shorts_rise_style
+    - dress_style
+    - dress_length
+    - skirt_style
+    - hoodie_application_type
 
-  **Respond in JSON format like this:**
-  {{
-      "product_title": "A concise, stylish product title",
-      "description": "An engaging, fashion-forward product description with styling insights. The keywords should be smoothly incorporated into the narrative.",
-      "hashtags": ["#fashion", "#trendy", "#style", "#event", "#holiday", "#details"],
-      "product_category": "Category name",
-      "product_type": "Set" if applicable, else "A short noun like 'Cami', 'Blouse', 'Sweatpants', 'Pullover', 'Mini Skirt', or 'Puffer Vest' that best describes the garment type based on visible features and silhouette.",
-      "key_attribute": "One defining visible feature",
-      "attributes": {{
-          "pattern": "Checkered",
-          "dress_style": ["Bodycon", "Slip"],
-          "occasion": ["Night Out", "Holiday"],
-          ...
-      }}
-  }}
+  ⚠️ If you are unsure of the correct value, return `"N/A"` for that value.
+
+**Respond in JSON format like this:**
+{{
+    "product_title": "A concise, stylish product title",
+    "description": "An engaging, fashion-forward product description with styling insights. The keywords should be smoothly incorporated into the narrative.",
+    "hashtags": ["#fashion", "#trendy", "#style", "#event", "#holiday", "#details"],
+    "product_category": "Category name",
+    "product_type": "Set" if applicable, else "A short noun like 'Cami', 'Blouse', 'Sweatpants', 'Pullover', 'Mini Skirt', or 'Puffer Vest' that best describes the garment type based on visible features and silhouette.",
+    "key_attribute": "One defining visible feature",
+    "attributes": {{
+        "color": ["N/A"],
+        "aesthetic": ["Minimal", "Elegant"],
+        "embellishment": ["N/A"],
+        "neckline": ["Crew Neck"],
+        "occasion": ["Casual", "Brunch"],
+        "occasion_theme": ["Date Night", "Girls Trip", "Holiday"],
+        "pattern": ["Solid"],
+        "product_language": ["English"],
+        "season": ["Fall"],
+        "theme": ["N/A"],
+        "dress_style": ["Slip"],
+        "dress_length": ["Mini"]
+    }}
+}}
