@@ -72,7 +72,7 @@ generate_description_prompt: |
 
   ⚠️ If you are unsure of the correct value, return `"N/A"` for that value.
 
-**Respond in JSON format like this:**
+- "**Respond in JSON format like this:**"
 ```json
 {
     "product_title": "A concise, stylish product title",
