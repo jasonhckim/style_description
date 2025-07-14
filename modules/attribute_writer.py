@@ -14,12 +14,12 @@ ATTRIBUTE_MAPPING = {
     "occasion": "Occasion (2)",
     "occasion_theme": "Occasion Theme (3)",
     "pattern": "Pattern (1)",
-    "product_language": "Product Language",color
+    "product_language": "Product Language",
     "season": "Season",
-    "sleeve_length": "TOP: Sleeve Length (1)",
     "theme": "Theme",
 
     # product_specific
+    "sleeve_length": "TOP: Sleeve Length (1)",
     "pants_length": "Pants Length",
     "shorts_length": "Shorts Length",
     "shorts_style": "Shorts Style",
@@ -29,8 +29,6 @@ ATTRIBUTE_MAPPING = {
     "skirt_style": "Skirt Style",
     "hoodie_application_type": "Hoodie: Application Type"
 }
-
-HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
 MANDATORY_KEYS = {
     "color": 1,
@@ -44,6 +42,21 @@ MANDATORY_KEYS = {
     "season": 1,
     "theme": 1
 }
+
+HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
+
+def enforce_required_attributes(selected_attrs):
+    """ Ensure all mandatory attributes exist and have correct length. """
+    for key, count in MANDATORY_KEYS.items():
+        val = selected_attrs.get(key)
+        if not val:
+            selected_attrs[key] = ["N/A"] * count
+        elif isinstance(val, list):
+            while len(val) < count:
+                val.append("N/A")
+        elif isinstance(val, str):
+            selected_attrs[key] = [val] * count
+    return selected_attrs
 
 def format_attribute_row(style_number, selected_attrs):
     row = ["" for _ in HEADERS]
@@ -59,21 +72,8 @@ def format_attribute_row(style_number, selected_attrs):
     return row
 
 def select_attributes_from_ai(product_title, description):
-    attr_constraints = {
-        "color": 1,
-        "aesthetic": 2,
-        "embellishment": 1,
-        "neckline": 1,
-        "occasion": 2,
-        "occasion_theme": 3,
-        "pattern": 1,
-        "product_language": 1,
-        "season": 1,
-        "theme": 1
-    }
-
     attr_instructions = "\n".join([
-        f"- {key}: return exactly {count} value(s)" for key, count in attr_constraints.items()
+        f"- {key}: return exactly {count} value(s)" for key, count in MANDATORY_KEYS.items()
     ])
 
     prompt = f"""
@@ -85,15 +85,28 @@ Description: {description}
 MANDATORY — Provide values for all of the following attributes:
 {attr_instructions}
 
-Use exact keys (e.g. "color", "pattern", etc). Return each value as a string or list of strings.
-
-Respond ONLY with a JSON object using this format:
+Use exact keys (e.g. "color", "pattern", etc). Respond ONLY with a JSON object like this:
 {{
   "color": ["..."],
   "aesthetic": ["...", "..."],
   ...
 }}
 """
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You are a fashion assistant mapping products to marketplace attributes."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        content = response.choices[0].message.content.strip()
+        parsed = json.loads(content)
+        return enforce_required_attributes(parsed)
+    except Exception as e:
+        print(f"⚠️ Error parsing AI response: {e}")
+        return enforce_required_attributes({})
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
