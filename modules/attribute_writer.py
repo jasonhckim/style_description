@@ -32,6 +32,18 @@ ATTRIBUTE_MAPPING = {
 
 HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
+MANDATORY_KEYS = {
+    "color": 1,
+    "aesthetic": 2,
+    "embellishment": 1,
+    "neckline": 1,
+    "occasion": 2,
+    "occasion_theme": 3,
+    "pattern": 1,
+    "product_language": 1,
+    "season": 1,
+    "theme": 1
+}
 
 def format_attribute_row(style_number, selected_attrs):
     row = ["" for _ in HEADERS]
@@ -46,12 +58,11 @@ def format_attribute_row(style_number, selected_attrs):
 
     return row
 
-from openai import OpenAI
-client = OpenAI()
-
 def select_attributes_from_ai(product_title, description):
     attr_keys = list(ATTRIBUTE_MAPPING.keys())
     attr_preview = "\n".join([f"- {k}" for k in attr_keys])
+
+    mandatory_preview = "\n".join([f"- {k} (at least {v})" for k, v in MANDATORY_KEYS.items()])
 
     prompt = f"""
 You're assigning marketplace attributes to a fashion product.
@@ -59,14 +70,18 @@ You're assigning marketplace attributes to a fashion product.
 Product Title: {product_title}
 Description: {description}
 
-Choose values for only applicable attributes below:
+Choose values for ALL mandatory attributes:
+{mandatory_preview}
+
+You may also include values for these optional attributes:
 {attr_preview}
 
-Return a JSON object using only these keys. Each value must be a string or a list of strings.
+Only use attribute keys exactly as listed. Return a JSON object where each key is from the list above and each value is a string or list of strings.
+Ensure list length matches minimum where indicated.
 """
 
     try:
-        response = client.chat.completions.create(
+        response = openai.chat.completions.create(
             model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": "You are a fashion assistant helping map products to their attributes."},
