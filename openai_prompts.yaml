@@ -70,9 +70,9 @@ generate_description_prompt: |
     - skirt_style
     - hoodie_application_type
 
-  ⚠️ If you are unsure of the correct value, return `"N/A"` for that value.
+⚠️ If you are unsure of the correct value, return "N/A" for that value.
 
-"**Respond in JSON format like this:**"
+  **Respond in JSON format like this:**
   {
     "product_title": "A concise, stylish product title",
     "description": "An engaging, fashion-forward product description with styling insights. The keywords should be smoothly incorporated into the narrative.",
