@@ -20,11 +20,10 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI function-calling."""
+    """Generates product description + attributes using OpenAI (real function-calling)."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
-
-    keyword_list = ", ".join(keywords[:3])  # top 3 keywords
+    keyword_list = ", ".join(keywords[:3])
 
     formatted_prompt = generate_description_prompt.format(
         style_number=style_number,
@@ -35,10 +34,10 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
 
     for attempt in range(max_retries):
         try:
-            print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
+            print(f"\n🔍 DEBUG: Sending request to OpenAI (REAL function-call) for {style_number}...")
 
             response = client.chat.completions.create(
-                model="gpt-4o",  # ✅ use gpt-4o or gpt-4o-mini (better function calling)
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "You are a fashion copywriter."},
                     {
@@ -49,44 +48,52 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                         ]
                     }
                 ],
-                functions=[
+                tools=[
                     {
-                        "name": "generate_product_description",
-                        "description": "Generate a fashion product description and attributes",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "product_title": {"type": "string"},
-                                "description": {"type": "string"},
-                                "product_category": {"type": "string"},
-                                "product_type": {"type": "string"},
-                                "key_attribute": {"type": "string"},
-                                "hashtags": {
-                                    "type": "array",
-                                    "items": {"type": "string"}
-                                },
-                                "attributes": {
-                                    "type": "object",
-                                    "properties": {
-                                        "fabric": {"type": "string"},
-                                        "silhouette": {"type": "string"},
-                                        "length": {"type": "string"},
-                                        "neckline": {"type": "string"},
-                                        "sleeve": {"type": "string"}
+                        "type": "function",
+                        "function": {
+                            "name": "generate_product_description",
+                            "description": "Generate a fashion product description and attributes",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "product_title": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "product_category": {"type": "string"},
+                                    "product_type": {"type": "string"},
+                                    "key_attribute": {"type": "string"},
+                                    "hashtags": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "properties": {
+                                            "fabric": {"type": "string"},
+                                            "silhouette": {"type": "string"},
+                                            "length": {"type": "string"},
+                                            "neckline": {"type": "string"},
+                                            "sleeve": {"type": "string"}
+                                        }
                                     }
-                                }
-                            },
-                            "required": ["product_title", "description", "product_category", "product_type"]
+                                },
+                                "required": [
+                                    "product_title",
+                                    "description",
+                                    "product_category",
+                                    "product_type"
+                                ]
+                            }
                         }
                     }
                 ],
-                function_call={"name": "generate_product_description"}
+                tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
             )
 
-            arguments = response.choices[0].message.function_call.arguments
+            arguments = response.choices[0].message.tool_calls[0].function.arguments
             parsed_data = json.loads(arguments)
 
-            # ✅ Clean and truncate fields
+            # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
             if len(description) > 300:
                 print(f"⚠️ Truncating long description for {style_number}.")
@@ -130,7 +137,6 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
 
-    # ✅ Fallback result if all retries fail
     print(f"❌ FAILED after {max_retries} attempts for {style_number}.")
     return {
         "Style Number": style_number,
