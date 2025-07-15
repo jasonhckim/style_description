@@ -2,6 +2,7 @@ import os
 import json
 import time
 import yaml
+import re
 from openai import OpenAI
 
 # ✅ Load prompts from YAML
@@ -96,32 +97,24 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"🧪 DEBUG RAW RESPONSE: {response}")
 
             # ✅ Prefer tool_calls; fallback to raw text if missing
-            import re
+            tool_calls = getattr(response.choices[0].message, "tool_calls", None)
 
-            try:
-                if response.choices[0].message.tool_calls:
-                    arguments = response.choices[0].message.tool_calls[0].function.arguments
-                    parsed_data = json.loads(arguments)
-                else:
-                    raw_text = response.choices[0].message.content.strip()
-                    print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
-            
-                    # ✅ If missing {}, wrap it properly
-                    if not raw_text.strip().startswith("{"):
-                        raw_text = "{" + raw_text.strip().strip(",") + "}"
-            
-                    # ✅ Extract {…} if extra junk exists
-                    match = re.search(r"\{[\s\S]*\}", raw_text)
-                    safe_json = match.group(0) if match else raw_text
-            
-                    print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
-            
-                    parsed_data = json.loads(safe_json)
-            
-            except json.JSONDecodeError as e:
-                print(f"❌ FINAL JSON Decode Error: {e}")
-                print(f"❌ RAW RESPONSE THAT FAILED:\n{raw_text}")
-                raise
+            if tool_calls:
+                print("✅ Using tool_calls response")
+                arguments = tool_calls[0].function.arguments
+                parsed_data = json.loads(arguments)
+            else:
+                raw_text = response.choices[0].message.content.strip()
+                print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
+
+                if not raw_text.startswith("{"):
+                    raw_text = "{" + raw_text.strip().strip(",") + "}"
+
+                match = re.search(r"\{[\s\S]*\}", raw_text)
+                safe_json = match.group(0) if match else raw_text
+
+                print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
+                parsed_data = json.loads(safe_json)
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
@@ -135,7 +128,6 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             key_attribute = parsed_data.get("key_attribute", "N/A").strip()
             hashtags = ", ".join(parsed_data.get("hashtags", []))
 
-            # ✅ Attributes
             attributes = parsed_data.get("attributes", {})
             fabric = attributes.get("fabric", "N/A")
             silhouette = attributes.get("silhouette", "N/A")
@@ -143,7 +135,6 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             neckline = attributes.get("neckline", "N/A")
             sleeve = attributes.get("sleeve", "N/A")
 
-            # ✅ Keyword usage tracking
             used_keywords = [kw for kw in keywords if kw.lower() in description.lower()]
             used_keywords_str = ", ".join(used_keywords)
 
