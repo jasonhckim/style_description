@@ -141,7 +141,8 @@ def process_pdf():
 
         expected_columns = [
             "Style Number", "Product Title", "Product Description", "Tags", 
-            "Product Category", "Product Type", "Option2 Value", "Keywords"
+            "Product Category", "Product Type", "Option2 Value", "Keywords",
+            "Fabric", "Silhouette", "Length", "Neckline", "Sleeve"
         ]
         missing_columns = [col for col in expected_columns if col not in df.columns]
         if missing_columns:
@@ -165,10 +166,17 @@ def process_pdf():
             "Product Category", 
             "Product Type", 
             "Option2 Value", 
-            "Keywords"
+            "Keywords",
+            "Fabric",
+            "Silhouette",
+            "Length",
+            "Neckline",
+            "Sleeve"
         ]
         df = df[column_order]
-                # ✅ Create creds to be reused below
+
+        print("🧪 DEBUG - Columns before writing marketplace sheet:", df.columns.tolist())
+
         try:
             service_account_json = os.environ["GOOGLE_CREDENTIALS"]
             info = json.loads(service_account_json)
