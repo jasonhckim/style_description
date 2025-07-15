@@ -26,10 +26,11 @@ SCOPES = [
 
 def get_service_credentials():
     """
-    Build a delegated service-account credential for Drive & Sheets.
+    Build a delegated service-account credential for Drive & Sheets
+    from JSON stored in environment variable (GitHub Secret).
     """
-    return service_account.Credentials.from_service_account_file(
-        os.environ["GOOGLE_CREDENTIALS"],
+    return service_account.Credentials.from_service_account_info(
+        json.loads(os.environ["GOOGLE_CREDENTIALS"]),
         scopes=SCOPES,
         subject="jason@hyfve.com"
     )
