@@ -1,3 +1,27 @@
+import os
+import json
+import time
+import yaml
+import re
+from openai import OpenAI
+
+# ✅ Load prompts from YAML
+try:
+    with open("openai_prompts.yaml", "r") as f:
+        prompts = yaml.safe_load(f)
+    generate_description_prompt = prompts["generate_description_prompt"]
+    print("✅ DEBUG: generate_description_prompt successfully loaded.")
+except FileNotFoundError:
+    print("❌ ERROR: openai_prompts.yaml not found. Check the file path.")
+    exit(1)
+except KeyError:
+    print("❌ ERROR: 'generate_description_prompt' key missing in openai_prompts.yaml.")
+    exit(1)
+
+# ✅ Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+print("✅ DEBUG: Running NEW ai_description with robust fallback enabled")
+
 def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product description + attributes using OpenAI with robust fallback."""
     is_set = "SET" in style_number.upper()
