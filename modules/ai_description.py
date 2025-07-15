@@ -77,16 +77,24 @@ Ensure the keywords ({keyword_list}) are included naturally in the description.
             print(f"\n🧪 RAW RESPONSE:\n{raw_text}\n")
 
             # ✅ Extract JSON block safely
-            if not raw_text.startswith("{"):
-                print(f"❌ Response does not start with '{{'. Skipping.")
-                continue
-
-            match = re.search(r"\{[\s\S]*\}", raw_text)
+            # ✅ Clean response before parsing
+            cleaned = re.sub(r"^```[a-zA-Z]*", "", raw_text)  # remove leading ```json or ```text
+            cleaned = re.sub(r"```$", "", cleaned).strip()    # remove trailing ```
+            cleaned = cleaned.strip()
+            
+            # ✅ Extract the first valid JSON object
+            match = re.search(r"\{[\s\S]*\}", cleaned)
             if not match:
-                raise ValueError("No valid JSON object found.")
-            raw_json = match.group(0)
+                raise ValueError(f"No valid JSON found. RAW: {raw_text[:200]}")
+            
+            raw_json = match.group(0).strip()
+            
+            try:
+                parsed_data = json.loads(raw_json)
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON Decode Error: {e}\nRAW JSON ATTEMPT:\n{raw_json}")
+                raise
 
-            parsed_data = json.loads(raw_json)
 
             # ✅ Clean and truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
