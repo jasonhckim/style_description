@@ -20,7 +20,7 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI (real function-calling)."""
+    """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
     keyword_list = ", ".join(keywords[:3])
@@ -34,7 +34,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
 
     for attempt in range(max_retries):
         try:
-            print(f"\n🔍 DEBUG: Sending request to OpenAI (REAL function-call) for {style_number}...")
+            print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
 
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -87,11 +87,22 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                         }
                     }
                 ],
-                tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
+                tool_choice={
+                    "type": "function",
+                    "function": {"name": "generate_product_description"}
+                }
             )
 
-            arguments = response.choices[0].message.tool_calls[0].function.arguments
-            parsed_data = json.loads(arguments)
+            print(f"🧪 DEBUG RAW RESPONSE: {response}")
+
+            # ✅ Prefer tool_calls; fallback to raw text if missing
+            if response.choices[0].message.tool_calls:
+                arguments = response.choices[0].message.tool_calls[0].function.arguments
+                parsed_data = json.loads(arguments)
+            else:
+                raw_text = response.choices[0].message.content.strip()
+                print("⚠️ No tool_calls returned. Falling back to plain JSON text parsing...")
+                parsed_data = json.loads(raw_text)
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
@@ -133,6 +144,9 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 "Sleeve": sleeve
             }
 
+        except json.JSONDecodeError as je:
+            print(f"❌ JSON Decode Error in attempt {attempt+1} for {style_number}: {je}")
+            time.sleep(2)
         except Exception as e:
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
