@@ -130,18 +130,25 @@ def process_pdf():
 
         processed_data = []
 
+       # Inside process_pdf(), replace the inner loop:
+
         for entry in extracted_data:
             if not entry["images"]:
                 print(f"⚠️ Skipping page {entry['page']} — no images found")
                 continue
-
+        
             try:
                 image_url = entry["images"][0]["image_url"]
                 result = ai_description.generate_description(entry["style_number"], [image_url], keywords, entry["text"])
-                processed_data.append(result)
-            except Exception as e:
-                print(f"❌ Error processing style {entry['style_number']}: {e}")
-                continue
+        
+                if result["Product Title"] == "N/A":
+                    print(f"⚠️ Skipping {entry['style_number']} due to failed AI generation.")
+                    continue
+
+        processed_data.append(result)
+    except Exception as e:
+        print(f"❌ Error processing style {entry['style_number']}: {e}")
+        continue
 
         if not processed_data:
             print(f"❌ No processed data for {pdf_filename}")
