@@ -96,13 +96,29 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"🧪 DEBUG RAW RESPONSE: {response}")
 
             # ✅ Prefer tool_calls; fallback to raw text if missing
+            import re
+
+            # ✅ Prefer tool_calls; fallback to raw text if missing
             if response.choices[0].message.tool_calls:
                 arguments = response.choices[0].message.tool_calls[0].function.arguments
                 parsed_data = json.loads(arguments)
             else:
                 raw_text = response.choices[0].message.content.strip()
-                print("⚠️ No tool_calls returned. Falling back to plain JSON text parsing...")
-                parsed_data = json.loads(raw_text)
+                print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
+            
+                # ✅ Extract JSON-like structure using regex
+                match = re.search(r"\{[\s\S]*\}", raw_text)
+                if match:
+                    safe_json = match.group(0)
+                else:
+                    # ✅ Force wrap as JSON if completely malformed (last resort)
+                    safe_json = "{" + raw_text.strip().strip(",") + "}"
+            
+                try:
+                    parsed_data = json.loads(safe_json)
+                except json.JSONDecodeError as e:
+                    print(f"❌ Still invalid JSON after sanitizing: {e}")
+                    raise
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
