@@ -19,7 +19,7 @@ except KeyError:
 
 # ✅ Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
+print("✅ DEBUG: Running NEW ai_description with fallback enabled")
 def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
     is_set = "SET" in style_number.upper()
