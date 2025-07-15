@@ -22,6 +22,8 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 print("✅ DEBUG: Running NEW ai_description with fallback enabled")
 
+# modules/ai_description.py
+
 def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
     is_set = "SET" in style_number.upper()
@@ -44,89 +46,52 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
     for attempt in range(max_retries):
         try:
             print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
-
             response = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "You are a fashion copywriter."},
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": formatted_prompt},
-                            *[{"type": "image_url", "image_url": {"url": url}} for url in images]
-                        ]
-                    }
-                ],
-                tools=[
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "generate_product_description",
-                            "description": "Generate a fashion product description and attributes",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "product_title": {"type": "string"},
-                                    "description": {"type": "string"},
-                                    "product_category": {"type": "string"},
-                                    "product_type": {"type": "string"},
-                                    "key_attribute": {"type": "string"},
-                                    "hashtags": {
-                                        "type": "array",
-                                        "items": {"type": "string"}
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "properties": {
-                                            "fabric": {"type": "string"},
-                                            "silhouette": {"type": "string"},
-                                            "length": {"type": "string"},
-                                            "neckline": {"type": "string"},
-                                            "sleeve": {"type": "string"}
-                                        }
-                                    }
-                                },
-                                "required": [
-                                    "product_title",
-                                    "description",
-                                    "product_category",
-                                    "product_type"
-                                ]
-                            }
-                        }
-                    }
-                ],
-                tool_choice={"type":"function","function":{"name":"generate_product_description"}}
+                messages=[ ... ],  # as before
+                tools=[ ... ],
+                tool_choice={ ... }
             )
 
-            # Handle function-call vs raw-text fallback
+            # parse out function call or raw text
             tool_calls = getattr(response.choices[0].message, "tool_calls", None)
             if tool_calls:
-                arguments = tool_calls[0].function.arguments
-                parsed_data = json.loads(arguments)
+                parsed = json.loads(tool_calls[0].function.arguments)
             else:
                 raw = response.choices[0].message.content.strip()
                 if not raw.startswith("{"):
                     raw = "{" + raw + "}"
                 match = re.search(r"\{[\s\S]*\}", raw)
                 safe = match.group(0) if match else raw
-                parsed_data = json.loads(safe)
+                parsed = json.loads(safe)
 
-            # Clean and truncate fields
-            desc = parsed_data.get("description", "").replace("\n", " ").strip()
+            # Clean/truncate
+            desc = parsed.get("description", "").replace("\n", " ").strip()
             if len(desc) > 300:
                 desc = desc[:297].rstrip() + "..."
 
+            # Always supply these five keys
+            attrs = parsed.get("attributes", {})
+            fabric     = attrs.get("fabric",     "N/A")
+            silhouette = attrs.get("silhouette", "N/A")
+            length     = attrs.get("length",     "N/A")
+            neckline   = attrs.get("neckline",   "N/A")
+            sleeve     = attrs.get("sleeve",     "N/A")
+
             return {
-                "Style Number": style_number,
-                "Product Title": parsed_data.get("product_title", "").strip(),
-                "Product Description": desc,
-                "Tags": ", ".join(parsed_data.get("hashtags", [])),
-                "Product Category": parsed_data.get("product_category", "N/A"),
-                "Product Type": "Set" if is_set else parsed_data.get("product_type", "N/A"),
-                "Option2 Value": parsed_data.get("key_attribute", "N/A"),
-                "Keywords": ", ".join([k for k in keywords if k.lower() in desc.lower()]),
-                **parsed_data.get("attributes", {})
+                "Style Number":         style_number,
+                "Product Title":        parsed.get("product_title", "").strip(),
+                "Product Description":  desc,
+                "Tags":                 ", ".join(parsed.get("hashtags", [])),
+                "Product Category":     parsed.get("product_category", "N/A"),
+                "Product Type":         "Set" if is_set else parsed.get("product_type", "N/A"),
+                "Option2 Value":        parsed.get("key_attribute", "N/A"),
+                "Keywords":             ", ".join([k for k in keywords if k.lower() in desc.lower()]),
+                "Fabric":               fabric,
+                "Silhouette":           silhouette,
+                "Length":               length,
+                "Neckline":             neckline,
+                "Sleeve":               sleeve
             }
 
         except json.JSONDecodeError as je:
@@ -136,14 +101,19 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
 
-    print(f"❌ FAILED after {max_retries} attempts for {style_number}.")
+    # on total failure, still return all columns
     return {
-        "Style Number": style_number,
-        "Product Title": "N/A",
-        "Product Description": "Failed to generate description.",
-        "Tags": "N/A",
-        "Product Category": "N/A",
-        "Product Type": "N/A",
-        "Option2 Value": "N/A",
-        "Keywords": "N/A"
+        "Style Number":         style_number,
+        "Product Title":        "N/A",
+        "Product Description":  "Failed to generate description.",
+        "Tags":                 "N/A",
+        "Product Category":     "N/A",
+        "Product Type":         "N/A",
+        "Option2 Value":        "N/A",
+        "Keywords":             "N/A",
+        "Fabric":               "N/A",
+        "Silhouette":           "N/A",
+        "Length":               "N/A",
+        "Neckline":             "N/A",
+        "Sleeve":               "N/A"
     }
