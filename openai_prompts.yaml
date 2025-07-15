@@ -1,201 +1,99 @@
-# openai\_prompts.yaml
-
+# openai_prompts.yaml
 generate_description_prompt: |
-HYFVE and Double Zero are in the B2B wholesale apparel manufacturing and distributing industry. You are generating SEO-optimized product names and descriptions for internal ERP systems and wholesale marketplace channels (e.g., Faire, FashionGo).
+  HYFVE and Double Zero are in the B2B wholesale apparel manufacturing and distributing industry. You are generating SEO-optimized product names and descriptions for internal ERP systems and wholesale marketplace channels (e.g., Faire, FashionGo).
 
-Your target audience is **business owners**, **wholesale buyers**, and **boutique store owners**.
+  Your target audience is **business owners**, **wholesale buyers**, and **boutique store owners**.
 
-You are a fashion expert with the combined perspective of a **B2B fashion designer** and a **B2B SEO optimizer**. Your role is to analyze and describe the clothing item identified by style number **{style\_number}** based on images and extracted text ONLY — do not invent details.
+  You are a fashion expert with the combined perspective of a **B2B fashion designer** and a **B2B SEO optimizer**. Your role is to analyze and describe the clothing item identified by style number **{style_number}** based on images and extracted text ONLY — do not invent details.
 
-* Extracted PDF text: **{extracted\_text}**
+  - Extracted PDF text: **{extracted_text}**
 
-* If buttons, zippers, texture (e.g., chunky, fuzzy), or necklines (e.g., v-neck) are not explicitly mentioned in text or image, treat them as not present.
+  - If buttons, zippers, texture (e.g., chunky, fuzzy), or necklines (e.g., v-neck) are not explicitly mentioned in text or image, treat them as not present.
+  - Never mention "velvet", "v-neck", or similar unless it is clearly visible or specified in the image/text.
+  - If the style number contains 'SET', it is a **coordinated clothing set** (e.g., top & bottom, dress & cardigan).
+  - If there is no 'SET', categorize it appropriately. **Category name must always be provided.**
+  - Do not infer based on typical features of sweaters or common styles. Only trust what is explicitly shown or written.
+  - If uncertain about a design detail, exclude it entirely. Err on the side of omission over speculation.
+  - Do not mention material names (e.g., “alpaca”, “cotton”, “polyester”) unless they are in red font above the image or explicitly labeled in text.
+  - Phrases like “alpaca blend”, “soft feel”, or “luxurious knit” must be excluded unless supported by visible or labeled information.
+  - Do NOT mention size availability (e.g., S/M/L or one size) in the description or title — sizing should never be referenced, even if present in the text.
+  - Do NOT include style numbers or any product codes in the title or description. These are internal and should never appear in customer-facing text.
+  - Do NOT mention any color names, even if they are provided or visible. Descriptions must remain color-agnostic.
+  - Do NOT use any useless words that don’t describe the product.
 
-* Never mention "velvet", "v-neck", or similar unless it is clearly visible or specified in the image/text.
+  - If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
+    - **MUST** be included in the **description**
+    - **SHOULD** be included in the **title** only if they describe a distinguishing, visible feature (e.g., “MINERAL WASH”, “SCUBA”, etc.).
 
-* If the style number contains 'SET', it is a **coordinated clothing set** (e.g., top & bottom, dress & cardigan).
+  - If the style has prints or patterns (e.g., gingham, checkered, leopard), describe them if they are clearly visible.
+  - Provide a **detailed but concise** description that captures: **silhouette, fit, structure, print pattern, and key design elements**.
 
-* If there is no 'SET', categorize it appropriately. **Category name must always be provided.**
+  - Avoid overused words like "chic", "elegant", "luxurious".
+  - Do **NOT** mention any **colors** (even if shown or labeled).
+  - Avoid assuming features that are not obvious (like buttons, zippers, stretch, etc.).
 
-* Do not infer based on typical features of sweaters or common styles. Only trust what is explicitly shown or written.
+  - Seamlessly integrate these keywords into the description: **{keywords}**
+    - Do not list them unnaturally.
+    - Emphasize style, comfort, versatility, and when or how to wear the item.
 
-* If uncertain about a design detail, exclude it entirely. Err on the side of omission over speculation.
+  {set_text}
 
-* Do not mention material names (e.g., “alpaca”, “cotton”, “polyester”) unless they are in red font above the image or explicitly labeled in text.
+  - Provide fashion-forward styling suggestions:
+    - What to wear it with
+    - Seasonal or situational relevance (e.g., casual, layering, night out)
+    - Layering or accessorizing ideas
+    - Each description must offer **unique suggestions** – do not repeat from previous ones.
 
-* Phrases like “alpaca blend”, “soft feel”, or “luxurious knit” must be excluded unless supported by visible or labeled information.
+  - The **product title must be exactly 40 characters**, no more, no less.
+  - The **description must be under 300 characters** – engaging, vivid, and practical.
 
-* Do NOT mention size availability (e.g., S/M/L or one size) in the description or title — sizing should never be referenced, even if present in the text.
+  🧠 In addition to generating the title and description, you must select the most applicable **product attributes** below:
+  - Use the exact keys shown below (case-sensitive).
+  - The response **must** include a top-level "attributes" field.
+  - Include **all of the following 10 required attributes**:
+    - color (1 value)
+    - aesthetic (2 values)
+    - embellishment (1 value)
+    - neckline (1 value)
+    - occasion (2 values)
+    - occasion_theme (3 values)
+    - pattern (1 value)
+    - product_language (1 value)
+    - season (1 value)
+    - theme (1 value)
 
-* Do NOT include style numbers or any product codes in the title or description. These are internal and should never appear in customer-facing text.
+  - Optional: Include any of the following **product-specific** attributes if applicable:
+    - pants_length
+    - shorts_length
+    - shorts_style
+    - shorts_rise_style
+    - dress_style
+    - dress_length
+    - skirt_style
+    - hoodie_application_type
 
-* Do NOT mention any color names, even if they are provided or visible. Descriptions must remain color-agnostic.
+  ⚠️ If you are unsure of the correct value, return "N/A" for that value.
 
-* Do NOT use any useless words that don’t describe the product.
-
-* If there are any words in **red font above the image**, treat them as fabric treatments, wash types, or key features. These words:
-
-  * **MUST** be included in the **description**
-  * **SHOULD** be included in the **title** only if they describe a distinguishing, visible feature (e.g., “MINERAL WASH”, “SCUBA”, etc.).
-
-* If the style has prints or patterns (e.g., gingham, checkered, leopard), describe them if they are clearly visible.
-
-* Provide a **detailed but concise** description that captures: **silhouette, fit, structure, print pattern, and key design elements**.
-
-* Avoid overused words like "chic", "elegant", "luxurious".
-
-* Do **NOT** mention any **colors** (even if shown or labeled).
-
-* Avoid assuming features that are not obvious (like buttons, zippers, stretch, etc.).
-
-* Seamlessly integrate these keywords into the description: **{keywords}**
-
-  * Do not list them unnaturally.
-  * Emphasize style, comfort, versatility, and when or how to wear the item.
-
-{set\_text}
-
-* Provide fashion-forward styling suggestions:
-
-  * What to wear it with
-  * Seasonal or situational relevance (e.g., casual, layering, night out)
-  * Layering or accessorizing ideas
-  * Each description must offer **unique suggestions** – do not repeat from previous ones.
-
-* The **product title must be exactly 40 characters**, no more, no less.
-
-* The **description must be under 300 characters** – engaging, vivid, and practical.
-
-🧠 In addition to generating the title and description, you must select the most applicable **product attributes** below:
-
-* Use the exact keys shown below (case-sensitive).
-
-* The response **must** include a top-level "attributes" field.
-
-* Include **all of the following 10 required attributes**:
-
-  * color (1 value)
-  * aesthetic (2 values)
-  * embellishment (1 value)
-  * neckline (1 value)
-  * occasion (2 values)
-  * occasion\_theme (3 values)
-  * pattern (1 value)
-  * product\_language (1 value)
-  * season (1 value)
-  * theme (1 value)
-
-* Optional: Include any of the following **product-specific** attributes if applicable:
-
-  * pants\_length
-  * shorts\_length
-  * shorts\_style
-  * shorts\_rise\_style
-  * dress\_style
-  * dress\_length
-  * skirt\_style
-  * hoodie\_application\_type
-
-⚠️ If you are unsure of the correct value, return "N/A" for that value.
-
-Respond in JSON format like this:
-{{
-"product\_title": "A concise, stylish product title",
-"description": "An engaging, fashion-forward product description with styling insights. The keywords should be smoothly incorporated into the narrative.",
-"hashtags": \["#fashion", "#trendy", "#style", "#event", "#holiday", "#details"],
-"product\_category": "Category name",
-"product\_type": "Set if applicable, else a short noun like 'Cami', 'Blouse', etc.'",
-"key\_attribute": "One defining visible feature",
-"attributes": {{
-"color": \["N/A"],
-"aesthetic": \["Minimal", "Elegant"],
-"embellishment": \["N/A"],
-"neckline": \["Crew Neck"],
-"occasion": \["Casual", "Brunch"],
-"occasion\_theme": \["Date Night", "Girls Trip", "Holiday"],
-"pattern": \["Solid"],
-"product\_language": \["English"],
-"season": \["Fall"],
-"theme": \["N/A"],
-"dress\_style": \["Slip"],
-"dress\_length": \["Mini"]
-}}
-}}
-
-# modules/ai\_description.py
-
-import os
-import json
-import time
-import yaml
-import re
-from openai import OpenAI
-
-# ✅ Load prompts from YAML
-
-try:
-with open("openai\_prompts.yaml", "r") as f:
-prompts = yaml.safe\_load(f)
-generate\_description\_prompt = prompts\["generate\_description\_prompt"]
-except FileNotFoundError:
-print("❌ ERROR: openai\_prompts.yaml not found. Check the file path.")
-exit(1)
-except KeyError:
-print("❌ ERROR: 'generate\_description\_prompt' key missing in openai\_prompts.yaml.")
-exit(1)
-
-# ✅ Initialize OpenAI client
-
-client = OpenAI(api\_key=os.environ.get("OPENAI\_API\_KEY"))
-print("✅ DEBUG: Running NEW ai\_description with fallback enabled")
-
-def generate\_description(style\_number, images, keywords, text, max\_retries=3):
-"""Generates product description + attributes using OpenAI with fallback to JSON parsing."""
-is\_set = "SET" in style\_number.upper()
-set\_text = "This style is a coordinated clothing set." if is\_set else ""
-keyword\_list = ", ".join(keywords\[:3])
-
-```
-# Safely format the prompt
-try:
-    formatted_prompt = generate_description_prompt.format(
-        style_number=style_number,
-        keywords=keyword_list,
-        set_text=set_text,
-        extracted_text=text
-    )
-except KeyError as ke:
-    print(f"❌ Prompt-template formatting error: missing placeholder {ke}")
-    raise
-formatted_prompt += f"\nEnsure the keywords ({keyword_list}) are included naturally in the description."
-
-for attempt in range(max_retries):
-    try:
-        print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a fashion copywriter."},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": formatted_prompt},
-                        *[{"type": "image_url", "image_url": {"url": url}} for url in images]
-                    ]
-                }
-            ],
-            tools=[ ... ]  # truncated for brevity
-        )
-        # (rest of your existing parsing and fallback logic remains unchanged)
-
-    except json.JSONDecodeError as je:
-        print(f"❌ JSON Decode Error in attempt {attempt+1} for {style_number}: {je}")
-        time.sleep(2)
-    except Exception as e:
-        print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
-        time.sleep(2)
-
-print(f"❌ FAILED after {max_retries} attempts for {style_number}.")
-return { ... }  # your existing failure return dictionary
-```
+  Respond in JSON format like this:
+  {{
+    "product_title": "A concise, stylish product title",
+    "description": "An engaging, fashion-forward product description with styling insights. The keywords should be smoothly incorporated into the narrative.",
+    "hashtags": ["#fashion", "#trendy", "#style", "#event", "#holiday", "#details"],
+    "product_category": "Category name",
+    "product_type": "Set if applicable, else a short noun like 'Cami', 'Blouse', etc.'",
+    "key_attribute": "One defining visible feature",
+    "attributes": {{
+      "color": ["N/A"],
+      "aesthetic": ["Minimal", "Elegant"],
+      "embellishment": ["N/A"],
+      "neckline": ["Crew Neck"],
+      "occasion": ["Casual", "Brunch"],
+      "occasion_theme": ["Date Night", "Girls Trip", "Holiday"],
+      "pattern": ["Solid"],
+      "product_language": ["English"],
+      "season": ["Fall"],
+      "theme": ["N/A"],
+      "dress_style": ["Slip"],
+      "dress_length": ["Mini"]
+    }}
+  }}
