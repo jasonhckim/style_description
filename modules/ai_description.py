@@ -3,14 +3,15 @@ import json
 import time
 import yaml
 import re
+from string import Template
 from openai import OpenAI
 
 # ✅ Load prompts from YAML
 try:
     with open("openai_prompts.yaml", "r") as f:
         prompts = yaml.safe_load(f)
-    generate_description_prompt = prompts["generate_description_prompt"]
-    print("✅ DEBUG: generate_description_prompt successfully loaded.")
+    generate_description_prompt = Template(prompts["generate_description_prompt"])
+    print("✅ DEBUG: generate_description_prompt successfully loaded (Template mode).")
 except FileNotFoundError:
     print("❌ ERROR: openai_prompts.yaml not found. Check the file path.")
     exit(1)
@@ -20,7 +21,7 @@ except KeyError:
 
 # ✅ Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-print("✅ DEBUG: Running NEW ai_description with robust fallback enabled")
+print("✅ DEBUG: Running ai_description with Template-based prompts + robust fallback")
 
 def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product description + attributes using OpenAI with robust fallback."""
@@ -28,12 +29,13 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
     set_text = "This style is a coordinated clothing set." if is_set else ""
     keyword_list = ", ".join(keywords[:3])
 
-    formatted_prompt = generate_description_prompt.format(
+    # ✅ Substitute using Template (no str.format issues!)
+    formatted_prompt = generate_description_prompt.substitute(
         style_number=style_number,
         keywords=keyword_list,
         set_text=set_text,
         extracted_text=text
-    ) + f"\nEnsure the keywords ({keyword_list}) are included naturally in the description."
+    )
 
     for attempt in range(max_retries):
         try:
@@ -90,36 +92,38 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                         }
                     }
                 ],
-                tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
+                tool_choice={
+                    "type": "function",
+                    "function": {"name": "generate_product_description"}
+                }
             )
 
-            print(f"🧪 DEBUG RAW RESPONSE:\n{response}")
+            print(f"🧪 DEBUG RAW RESPONSE: {response}")
 
-            # ✅ Try tool_calls first, fallback to raw
-            try:
-                tool_calls = getattr(response.choices[0].message, "tool_calls", None)
-                if tool_calls:
-                    print("✅ Using tool_calls response")
-                    arguments = tool_calls[0].function.arguments
-                    parsed_data = json.loads(arguments)
-                else:
-                    raise ValueError("No tool_calls, forcing raw fallback")
+            # ✅ Prefer tool_calls; fallback to raw text if missing
+            tool_calls = getattr(response.choices[0].message, "tool_calls", None)
 
-            except Exception as e:
-                print(f"⚠️ Tool_calls failed ({e}), using raw text fallback...")
-                raw_text = response.choices[0].message.content or ""
-                raw_text = raw_text.strip().replace("\n", " ")
-                # force braces if missing
+            if tool_calls:
+                print("✅ Using tool_calls response")
+                arguments = tool_calls[0].function.arguments
+                parsed_data = json.loads(arguments)
+            else:
+                raw_text = response.choices[0].message.content.strip()
+                print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
+
                 if not raw_text.startswith("{"):
-                    raw_text = "{" + raw_text.strip(", ") + "}"
+                    raw_text = "{" + raw_text.strip().strip(",") + "}"
+
                 match = re.search(r"\{[\s\S]*\}", raw_text)
                 safe_json = match.group(0) if match else raw_text
-                print(f"🧪 Sanitized Fallback JSON:\n{safe_json}")
+
+                print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
                 parsed_data = json.loads(safe_json)
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
             if len(description) > 300:
+                print(f"⚠️ Truncating long description for {style_number}.")
                 description = description[:297].rstrip() + "..."
 
             product_title = parsed_data.get("product_title", "").strip()
@@ -154,6 +158,9 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 "Sleeve": sleeve
             }
 
+        except json.JSONDecodeError as je:
+            print(f"❌ JSON Decode Error in attempt {attempt+1} for {style_number}: {je}")
+            time.sleep(2)
         except Exception as e:
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
