@@ -98,27 +98,30 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             # ✅ Prefer tool_calls; fallback to raw text if missing
             import re
 
-            # ✅ Prefer tool_calls; fallback to raw text if missing
-            if response.choices[0].message.tool_calls:
-                arguments = response.choices[0].message.tool_calls[0].function.arguments
-                parsed_data = json.loads(arguments)
-            else:
-                raw_text = response.choices[0].message.content.strip()
-                print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
-            
-                # ✅ Extract JSON-like structure using regex
-                match = re.search(r"\{[\s\S]*\}", raw_text)
-                if match:
-                    safe_json = match.group(0)
+            try:
+                if response.choices[0].message.tool_calls:
+                    arguments = response.choices[0].message.tool_calls[0].function.arguments
+                    parsed_data = json.loads(arguments)
                 else:
-                    # ✅ Force wrap as JSON if completely malformed (last resort)
-                    safe_json = "{" + raw_text.strip().strip(",") + "}"
+                    raw_text = response.choices[0].message.content.strip()
+                    print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
             
-                try:
+                    # ✅ If missing {}, wrap it properly
+                    if not raw_text.strip().startswith("{"):
+                        raw_text = "{" + raw_text.strip().strip(",") + "}"
+            
+                    # ✅ Extract {…} if extra junk exists
+                    match = re.search(r"\{[\s\S]*\}", raw_text)
+                    safe_json = match.group(0) if match else raw_text
+            
+                    print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
+            
                     parsed_data = json.loads(safe_json)
-                except json.JSONDecodeError as e:
-                    print(f"❌ Still invalid JSON after sanitizing: {e}")
-                    raise
+            
+            except json.JSONDecodeError as e:
+                print(f"❌ FINAL JSON Decode Error: {e}")
+                print(f"❌ RAW RESPONSE THAT FAILED:\n{raw_text}")
+                raise
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
