@@ -22,8 +22,6 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 print("✅ DEBUG: Running NEW ai_description with fallback enabled")
 
-# modules/ai_description.py
-
 def generate_description(style_number, images, keywords, text, max_retries=3):
     """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
     is_set = "SET" in style_number.upper()
@@ -48,12 +46,59 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
             response = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[ ... ],  # as before
-                tools=[ ... ],
-                tool_choice={ ... }
+                messages=[
+                    {"role": "system", "content": "You are a fashion copywriter."},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": formatted_prompt},
+                            *[{"type": "image_url", "image_url": {"url": url}} for url in images]
+                        ]
+                    }
+                ],
+                tools=[
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "generate_product_description",
+                            "description": "Generate a fashion product description and attributes",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "product_title": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "product_category": {"type": "string"},
+                                    "product_type": {"type": "string"},
+                                    "key_attribute": {"type": "string"},
+                                    "hashtags": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "properties": {
+                                            "fabric": {"type": "string"},
+                                            "silhouette": {"type": "string"},
+                                            "length": {"type": "string"},
+                                            "neckline": {"type": "string"},
+                                            "sleeve": {"type": "string"}
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "product_title",
+                                    "description",
+                                    "product_category",
+                                    "product_type"
+                                ]
+                            }
+                        }
+                    }
+                ],
+                tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
             )
 
-            # parse out function call or raw text
+            # Handle function-call vs raw-text fallback
             tool_calls = getattr(response.choices[0].message, "tool_calls", None)
             if tool_calls:
                 parsed = json.loads(tool_calls[0].function.arguments)
