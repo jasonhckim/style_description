@@ -1,7 +1,5 @@
 import gspread
-import openai
 import json
-import os
 from modules.utils import get_env_variable
 
 # ✅ Unified attribute map from config/marketplace_attributes.json
@@ -46,7 +44,7 @@ MANDATORY_KEYS = {
 HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
 def enforce_required_attributes(selected_attrs):
-    """ Ensure all mandatory attributes exist and have correct length. """
+    """Ensure all mandatory attributes exist and have correct length."""
     for key, count in MANDATORY_KEYS.items():
         val = selected_attrs.get(key)
         if not val:
@@ -59,6 +57,7 @@ def enforce_required_attributes(selected_attrs):
     return selected_attrs
 
 def format_attribute_row(style_number, selected_attrs):
+    """Formats selected attributes into a Google Sheets row."""
     row = ["" for _ in HEADERS]
     row[0] = style_number
 
@@ -71,44 +70,36 @@ def format_attribute_row(style_number, selected_attrs):
 
     return row
 
-def select_attributes_from_ai(product_title, description):
-    attr_instructions = "\n".join([
-        f"- {key}: return exactly {count} value(s)" for key, count in MANDATORY_KEYS.items()
-    ])
+def map_ai_attributes_to_marketplace(ai_attributes):
+    """
+    Converts ai_description.py attributes (fabric, silhouette, length, neckline, sleeve)
+    to the marketplace ATTRIBUTE_MAPPING keys where relevant.
+    """
+    mapped = {}
 
-    prompt = f"""
-You're selecting marketplace attributes for the product below.
+    if not ai_attributes:
+        return mapped
 
-Product Title: {product_title}
-Description: {description}
+    # ✅ Example mapping logic (customize as needed)
+    if ai_attributes.get("neckline"):
+        mapped["neckline"] = [ai_attributes["neckline"]]
 
-MANDATORY — Provide values for all of the following attributes:
-{attr_instructions}
+    if ai_attributes.get("sleeve"):
+        mapped["sleeve_length"] = [ai_attributes["sleeve"]]  # maps to "TOP: Sleeve Length (1)"
 
-Use exact keys (e.g. "color", "pattern", etc). Respond ONLY with a JSON object like this:
-{{
-  "color": ["..."],
-  "aesthetic": ["...", "..."],
-  ...
-}}
-"""
+    if ai_attributes.get("length"):
+        mapped["dress_length"] = [ai_attributes["length"]]  # maps to "Dress: Skirt & Dress Length"
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": "You are a fashion assistant mapping products to marketplace attributes."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        content = response.choices[0].message.content.strip()
-        parsed = json.loads(content)
-        return enforce_required_attributes(parsed)
-    except Exception as e:
-        print(f"⚠️ Error parsing AI response: {e}")
-        return enforce_required_attributes({})
+    if ai_attributes.get("silhouette"):
+        mapped["dress_style"] = [ai_attributes["silhouette"]]
+
+    if ai_attributes.get("fabric"):
+        mapped["aesthetic"] = [ai_attributes["fabric"]]  # temporary mapping; can refine later
+
+    return mapped
 
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
+    """Writes product + attributes to Google Sheets."""
     gc = gspread.authorize(creds)
     title = pdf_filename.replace(".pdf", "").strip()
     sh = gc.create(f"Marketplace - {title}", folder_id)
@@ -119,17 +110,28 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     print("📊 Normalized columns:", df.columns.tolist())
 
     ws.update("A1", [HEADERS])
-
     all_rows = []
 
     for _, row in df.iterrows():
         try:
             style_number = row["style_number"]
-            title = row["product_title"]
-            desc = row["product_description"]
-            selected_attrs = select_attributes_from_ai(title, desc)
+            ai_attributes = {
+                "fabric": row.get("fabric", ""),
+                "silhouette": row.get("silhouette", ""),
+                "length": row.get("length", ""),
+                "neckline": row.get("neckline", ""),
+                "sleeve": row.get("sleeve", "")
+            }
+
+            # ✅ Map AI attributes to marketplace format
+            selected_attrs = map_ai_attributes_to_marketplace(ai_attributes)
+
+            # ✅ Ensure mandatory attributes
+            selected_attrs = enforce_required_attributes(selected_attrs)
+
             row_data = format_attribute_row(style_number, selected_attrs)
             all_rows.append(row_data)
+
         except KeyError as e:
             print(f"⚠️ Skipping row due to missing field: {e}")
             continue
