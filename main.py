@@ -31,7 +31,7 @@ with open("config.yaml", "r") as f:
 PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
-TEMPLATE_SHEET_ID = config["template_sheet_id"]  # <-- New line
+TEMPLATE_SHEET_ID = config["template_sheet_id"]
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -130,26 +130,28 @@ def process_pdf():
 
         processed_data = []
 
-       # Inside process_pdf(), replace the inner loop:
-
         for entry in extracted_data:
             if not entry["images"]:
                 print(f"⚠️ Skipping page {entry['page']} — no images found")
                 continue
-        
+
             try:
                 image_url = entry["images"][0]["image_url"]
-                result = ai_description.generate_description(entry["style_number"], [image_url], keywords, entry["text"])
-        
+                result = ai_description.generate_description(
+                    entry["style_number"], [image_url], keywords, entry["text"]
+                )
+
                 if result["Product Title"] == "N/A":
                     print(f"⚠️ Skipping {entry['style_number']} due to failed AI generation.")
                     continue
 
-        processed_data.append(result)
-    except Exception as e:
-        print(f"❌ Error processing style {entry['style_number']}: {e}")
-        continue
+                processed_data.append(result)
+                print(f"✅ Processed style {entry['style_number']} successfully")
+            except Exception as e:
+                print(f"❌ Error processing style {entry['style_number']}: {e}")
+                continue
 
+        # ✅ FIXED: must be OUTSIDE the for-loop
         if not processed_data:
             print(f"❌ No processed data for {pdf_filename}")
             continue
@@ -157,7 +159,7 @@ def process_pdf():
         df = pd.DataFrame(processed_data)
 
         expected_columns = [
-            "Style Number", "Product Title", "Product Description", "Tags", 
+            "Style Number", "Product Title", "Product Description", "Tags",
             "Product Category", "Product Type", "Option2 Value", "Keywords",
             "Fabric", "Silhouette", "Length", "Neckline", "Sleeve"
         ]
@@ -172,17 +174,17 @@ def process_pdf():
         df["Edit Product Description"] = ""
 
         column_order = [
-            "Style Number", 
-            "Product Name Character Count", 
+            "Style Number",
+            "Product Name Character Count",
             "Product Title",
             "Edit Product Title",
-            "Description Character Count", 
+            "Description Character Count",
             "Product Description",
             "Edit Product Description",
-            "Tags", 
-            "Product Category", 
-            "Product Type", 
-            "Option2 Value", 
+            "Tags",
+            "Product Category",
+            "Product Type",
+            "Option2 Value",
             "Keywords",
             "Fabric",
             "Silhouette",
@@ -211,7 +213,6 @@ def process_pdf():
         write_marketplace_attribute_sheet(df, pdf_filename, creds, PDF_FOLDER_ID)
 
         print(f"✅ Finished processing {pdf_filename}")
-                # Generate marketplace attribute tabs ("faire", "fgo")
-                
+
 if __name__ == "__main__":
     process_pdf()
