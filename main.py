@@ -10,6 +10,13 @@ from dotenv import load_dotenv
 import os, json
 from modules.attribute_writer import write_marketplace_attribute_sheet
 
+import inspect
+import modules.ai_description as ai_desc
+
+print("\n✅ DEBUG: Using ai_description file at:", inspect.getfile(ai_desc))
+print("✅ DEBUG: First 10 lines of ai_description.generate_description:\n")
+print("\n".join(inspect.getsource(ai_desc.generate_description).splitlines()[:10]))
+
 # ✅ Load environment variables
 load_dotenv()
 
