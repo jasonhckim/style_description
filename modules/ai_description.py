@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import re
 import yaml
 from openai import OpenAI
 
@@ -21,48 +20,27 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI."""
+    """Generates product description + attributes using OpenAI function-calling."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
 
-    keyword_list = ", ".join(keywords[:3])  # use top 3 keywords
+    keyword_list = ", ".join(keywords[:3])  # top 3 keywords
 
-    # ✅ Format full prompt
     formatted_prompt = generate_description_prompt.format(
         style_number=style_number,
         keywords=keyword_list,
         set_text=set_text,
         extracted_text=text
-    ) + f"""
-    
-Respond only in this strict JSON format:
-{{
-  "product_title": "...",
-  "description": "...",
-  "product_category": "...",
-  "product_type": "...",
-  "key_attribute": "...",
-  "hashtags": ["...", "..."],
-  "attributes": {{
-    "fabric": "...",
-    "silhouette": "...",
-    "length": "...",
-    "neckline": "...",
-    "sleeve": "..."
-  }}
-}}
-
-Ensure the keywords ({keyword_list}) are included naturally in the description.
-"""
+    ) + f"\nEnsure the keywords ({keyword_list}) are included naturally in the description."
 
     for attempt in range(max_retries):
         try:
-            print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
+            print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
 
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",  # ✅ use gpt-4o or gpt-4o-mini (better function calling)
                 messages=[
-                    {"role": "system", "content": "You are a fashion copywriter. Reply only with JSON, no extra text."},
+                    {"role": "system", "content": "You are a fashion copywriter."},
                     {
                         "role": "user",
                         "content": [
@@ -70,31 +48,43 @@ Ensure the keywords ({keyword_list}) are included naturally in the description.
                             *[{"type": "image_url", "image_url": {"url": url}} for url in images]
                         ]
                     }
-                ]
+                ],
+                functions=[
+                    {
+                        "name": "generate_product_description",
+                        "description": "Generate a fashion product description and attributes",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "product_title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "product_category": {"type": "string"},
+                                "product_type": {"type": "string"},
+                                "key_attribute": {"type": "string"},
+                                "hashtags": {
+                                    "type": "array",
+                                    "items": {"type": "string"}
+                                },
+                                "attributes": {
+                                    "type": "object",
+                                    "properties": {
+                                        "fabric": {"type": "string"},
+                                        "silhouette": {"type": "string"},
+                                        "length": {"type": "string"},
+                                        "neckline": {"type": "string"},
+                                        "sleeve": {"type": "string"}
+                                    }
+                                }
+                            },
+                            "required": ["product_title", "description", "product_category", "product_type"]
+                        }
+                    }
+                ],
+                function_call={"name": "generate_product_description"}
             )
 
-            raw_text = response.choices[0].message.content.strip()
-            print(f"\n🧪 RAW RESPONSE:\n{raw_text}\n")
-
-            # ✅ Extract JSON block safely
-            # ✅ Clean response before parsing
-            cleaned = re.sub(r"^```[a-zA-Z]*", "", raw_text)  # remove leading ```json or ```text
-            cleaned = re.sub(r"```$", "", cleaned).strip()    # remove trailing ```
-            cleaned = cleaned.strip()
-            
-            # ✅ Extract the first valid JSON object
-            match = re.search(r"\{[\s\S]*\}", cleaned)
-            if not match:
-                raise ValueError(f"No valid JSON found. RAW: {raw_text[:200]}")
-            
-            raw_json = match.group(0).strip()
-            
-            try:
-                parsed_data = json.loads(raw_json)
-            except json.JSONDecodeError as e:
-                print(f"❌ JSON Decode Error: {e}\nRAW JSON ATTEMPT:\n{raw_json}")
-                raise
-
+            arguments = response.choices[0].message.function_call.arguments
+            parsed_data = json.loads(arguments)
 
             # ✅ Clean and truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
@@ -102,7 +92,7 @@ Ensure the keywords ({keyword_list}) are included naturally in the description.
                 print(f"⚠️ Truncating long description for {style_number}.")
                 description = description[:297].rstrip() + "..."
 
-            product_title = parsed_data.get("product_title", "").replace("\n", " ").strip()
+            product_title = parsed_data.get("product_title", "").strip()
             product_category = parsed_data.get("product_category", "N/A").strip()
             product_type = "Set" if is_set else parsed_data.get("product_type", "N/A").strip()
             key_attribute = parsed_data.get("key_attribute", "N/A").strip()
@@ -117,7 +107,7 @@ Ensure the keywords ({keyword_list}) are included naturally in the description.
             sleeve = attributes.get("sleeve", "N/A")
 
             # ✅ Keyword usage tracking
-            used_keywords = [kw for kw in keywords if re.search(rf'\b{re.escape(kw)}\b', description, re.IGNORECASE)]
+            used_keywords = [kw for kw in keywords if kw.lower() in description.lower()]
             used_keywords_str = ", ".join(used_keywords)
 
             return {
