@@ -19,9 +19,20 @@ except KeyError:
 
 # ✅ Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-print("✅ DEBUG: Running NEW ai_description with fallback enabled")
+print("✅ DEBUG: Running NEW ai_description with robust fallback enabled")
+
+def safe_parse_json(raw_text):
+    """Attempts to sanitize and parse a JSON-like string."""
+    raw_text = raw_text.strip()
+    if not raw_text.startswith("{"):
+        raw_text = "{" + raw_text.strip(",{} ") + "}"
+    match = re.search(r"\{[\s\S]*\}", raw_text)
+    safe_json = match.group(0) if match else raw_text
+    print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
+    return json.loads(safe_json)
+
 def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
+    """Generates product description + attributes using OpenAI with robust fallback."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
     keyword_list = ", ".join(keywords[:3])
@@ -35,7 +46,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
 
     for attempt in range(max_retries):
         try:
-            print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
+            print(f"\n🔍 DEBUG: Sending request to OpenAI (attempt {attempt+1}) for {style_number}...")
 
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -63,10 +74,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                                     "product_category": {"type": "string"},
                                     "product_type": {"type": "string"},
                                     "key_attribute": {"type": "string"},
-                                    "hashtags": {
-                                        "type": "array",
-                                        "items": {"type": "string"}
-                                    },
+                                    "hashtags": {"type": "array", "items": {"type": "string"}},
                                     "attributes": {
                                         "type": "object",
                                         "properties": {
@@ -79,24 +87,18 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                                     }
                                 },
                                 "required": [
-                                    "product_title",
-                                    "description",
-                                    "product_category",
-                                    "product_type"
+                                    "product_title", "description", "product_category", "product_type"
                                 ]
                             }
                         }
                     }
                 ],
-                tool_choice={
-                    "type": "function",
-                    "function": {"name": "generate_product_description"}
-                }
+                tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
             )
 
             print(f"🧪 DEBUG RAW RESPONSE: {response}")
 
-            # ✅ Prefer tool_calls; fallback to raw text if missing
+            parsed_data = {}
             tool_calls = getattr(response.choices[0].message, "tool_calls", None)
 
             if tool_calls:
@@ -106,15 +108,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             else:
                 raw_text = response.choices[0].message.content.strip()
                 print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
-
-                if not raw_text.startswith("{"):
-                    raw_text = "{" + raw_text.strip().strip(",") + "}"
-
-                match = re.search(r"\{[\s\S]*\}", raw_text)
-                safe_json = match.group(0) if match else raw_text
-
-                print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
-                parsed_data = json.loads(safe_json)
+                parsed_data = safe_parse_json(raw_text)
 
             # ✅ Clean + truncate fields
             description = parsed_data.get("description", "").replace("\n", " ").strip()
@@ -122,7 +116,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 print(f"⚠️ Truncating long description for {style_number}.")
                 description = description[:297].rstrip() + "..."
 
-            product_title = parsed_data.get("product_title", "").strip()
+            product_title = parsed_data.get("product_title", "N/A").strip()
             product_category = parsed_data.get("product_category", "N/A").strip()
             product_type = "Set" if is_set else parsed_data.get("product_type", "N/A").strip()
             key_attribute = parsed_data.get("key_attribute", "N/A").strip()
@@ -154,14 +148,11 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 "Sleeve": sleeve
             }
 
-        except json.JSONDecodeError as je:
-            print(f"❌ JSON Decode Error in attempt {attempt+1} for {style_number}: {je}")
-            time.sleep(2)
         except Exception as e:
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
 
-    print(f"❌ FAILED after {max_retries} attempts for {style_number}.")
+    print(f"❌ FAILED after {max_retries} attempts for {style_number}. Returning fallback.")
     return {
         "Style Number": style_number,
         "Product Title": "N/A",
