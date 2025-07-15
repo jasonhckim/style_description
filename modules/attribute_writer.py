@@ -106,7 +106,8 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     ws = sh.sheet1
     ws.update_title("faire")
 
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    df.columns = [c.lower() for c in df.columns]
+
     print("📊 Normalized columns:", df.columns.tolist())
 
     ws.update("A1", [HEADERS])
@@ -122,6 +123,7 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
                 "neckline": row.get("neckline", ""),
                 "sleeve": row.get("sleeve", "")
             }
+
 
             # ✅ Map AI attributes to marketplace format
             selected_attrs = map_ai_attributes_to_marketplace(ai_attributes)
