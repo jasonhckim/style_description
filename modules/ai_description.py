@@ -1,17 +1,16 @@
+# modules/ai_description.py
 import os
 import json
 import time
 import yaml
 import re
-from string import Template
 from openai import OpenAI
 
 # ✅ Load prompts from YAML
 try:
     with open("openai_prompts.yaml", "r") as f:
         prompts = yaml.safe_load(f)
-    generate_description_prompt = Template(prompts["generate_description_prompt"])
-    print("✅ DEBUG: generate_description_prompt successfully loaded (Template mode).")
+    generate_description_prompt = prompts["generate_description_prompt"]
 except FileNotFoundError:
     print("❌ ERROR: openai_prompts.yaml not found. Check the file path.")
     exit(1)
@@ -21,25 +20,30 @@ except KeyError:
 
 # ✅ Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-print("✅ DEBUG: Running ai_description with Template-based prompts + robust fallback")
+print("✅ DEBUG: Running NEW ai_description with fallback enabled")
 
 def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI with robust fallback."""
+    """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
     keyword_list = ", ".join(keywords[:3])
 
-    # ✅ Substitute using Template (no str.format issues!)
-    formatted_prompt = generate_description_prompt.substitute(
-        style_number=style_number,
-        keywords=keyword_list,
-        set_text=set_text,
-        extracted_text=text
-    )
+    # Safely format the prompt
+    try:
+        formatted_prompt = generate_description_prompt.format(
+            style_number=style_number,
+            keywords=keyword_list,
+            set_text=set_text,
+            extracted_text=text
+        )
+    except KeyError as ke:
+        print(f"❌ Prompt-template formatting error: missing placeholder {ke}")
+        raise
+    formatted_prompt += f"\nEnsure the keywords ({keyword_list}) are included naturally in the description."
 
     for attempt in range(max_retries):
         try:
-            print(f"\n🔍 DEBUG: Sending request to OpenAI for {style_number}...")
+            print(f"\n🔍 DEBUG: Sending request to OpenAI (function-call) for {style_number}...")
 
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -92,70 +96,37 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                         }
                     }
                 ],
-                tool_choice={
-                    "type": "function",
-                    "function": {"name": "generate_product_description"}
-                }
+                tool_choice={"type":"function","function":{"name":"generate_product_description"}}
             )
 
-            print(f"🧪 DEBUG RAW RESPONSE: {response}")
-
-            # ✅ Prefer tool_calls; fallback to raw text if missing
+            # Handle function-call vs raw-text fallback
             tool_calls = getattr(response.choices[0].message, "tool_calls", None)
-
             if tool_calls:
-                print("✅ Using tool_calls response")
                 arguments = tool_calls[0].function.arguments
                 parsed_data = json.loads(arguments)
             else:
-                raw_text = response.choices[0].message.content.strip()
-                print(f"⚠️ No tool_calls returned. Raw text:\n{raw_text}")
+                raw = response.choices[0].message.content.strip()
+                if not raw.startswith("{"):
+                    raw = "{" + raw + "}"
+                match = re.search(r"\{[\s\S]*\}", raw)
+                safe = match.group(0) if match else raw
+                parsed_data = json.loads(safe)
 
-                if not raw_text.startswith("{"):
-                    raw_text = "{" + raw_text.strip().strip(",") + "}"
-
-                match = re.search(r"\{[\s\S]*\}", raw_text)
-                safe_json = match.group(0) if match else raw_text
-
-                print(f"🧪 Sanitized JSON before parsing:\n{safe_json}")
-                parsed_data = json.loads(safe_json)
-
-            # ✅ Clean + truncate fields
-            description = parsed_data.get("description", "").replace("\n", " ").strip()
-            if len(description) > 300:
-                print(f"⚠️ Truncating long description for {style_number}.")
-                description = description[:297].rstrip() + "..."
-
-            product_title = parsed_data.get("product_title", "").strip()
-            product_category = parsed_data.get("product_category", "N/A").strip()
-            product_type = "Set" if is_set else parsed_data.get("product_type", "N/A").strip()
-            key_attribute = parsed_data.get("key_attribute", "N/A").strip()
-            hashtags = ", ".join(parsed_data.get("hashtags", []))
-
-            attributes = parsed_data.get("attributes", {})
-            fabric = attributes.get("fabric", "N/A")
-            silhouette = attributes.get("silhouette", "N/A")
-            length = attributes.get("length", "N/A")
-            neckline = attributes.get("neckline", "N/A")
-            sleeve = attributes.get("sleeve", "N/A")
-
-            used_keywords = [kw for kw in keywords if kw.lower() in description.lower()]
-            used_keywords_str = ", ".join(used_keywords)
+            # Clean and truncate fields
+            desc = parsed_data.get("description", "").replace("\n", " ").strip()
+            if len(desc) > 300:
+                desc = desc[:297].rstrip() + "..."
 
             return {
                 "Style Number": style_number,
-                "Product Title": product_title,
-                "Product Description": description,
-                "Tags": hashtags,
-                "Product Category": product_category,
-                "Product Type": product_type,
-                "Option2 Value": key_attribute,
-                "Keywords": used_keywords_str,
-                "Fabric": fabric,
-                "Silhouette": silhouette,
-                "Length": length,
-                "Neckline": neckline,
-                "Sleeve": sleeve
+                "Product Title": parsed_data.get("product_title", "").strip(),
+                "Product Description": desc,
+                "Tags": ", ".join(parsed_data.get("hashtags", [])),
+                "Product Category": parsed_data.get("product_category", "N/A"),
+                "Product Type": "Set" if is_set else parsed_data.get("product_type", "N/A"),
+                "Option2 Value": parsed_data.get("key_attribute", "N/A"),
+                "Keywords": ", ".join([k for k in keywords if k.lower() in desc.lower()]),
+                **parsed_data.get("attributes", {})
             }
 
         except json.JSONDecodeError as je:
@@ -174,10 +145,5 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
         "Product Category": "N/A",
         "Product Type": "N/A",
         "Option2 Value": "N/A",
-        "Keywords": "N/A",
-        "Fabric": "N/A",
-        "Silhouette": "N/A",
-        "Length": "N/A",
-        "Neckline": "N/A",
-        "Sleeve": "N/A"
+        "Keywords": "N/A"
     }
