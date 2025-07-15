@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 import os, json
 from modules.attribute_writer import write_marketplace_attribute_sheet
 
+import openai
+print(f"✅ OpenAI package version in use: {openai.__version__}")
+
 import inspect
 import modules.ai_description as ai_desc
 
