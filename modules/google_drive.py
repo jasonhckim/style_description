@@ -160,19 +160,14 @@ def upload_image_to_public_url(local_image_path, drive_service, folder_id=None):
     return f"https://drive.google.com/uc?id={uploaded_file['id']}"
 
 #Copy a template Sheet
-def copy_sheet_from_template(new_title, destination_folder_id, creds):
+def copy_sheet_from_template(template_id, new_title, destination_folder_id, creds):
     drive = build("drive", "v3", credentials=creds)
-    template_id = config["template_sheet_id"]
-
-    copied_file = drive.files().copy(
-        fileId=template_id,
-        body={"name": new_title, "parents": [destination_folder_id]}
-    ).execute()
-
-    print(f"✅ Copied template to new sheet: https://docs.google.com/spreadsheets/d/{copied_file['id']}")
-    return copied_file["id"]
-
-
+    body = {
+        "name": new_title,
+        "parents": [destination_folder_id]
+    }
+    copied_file = drive.files().copy(fileId=template_id, body=body).execute()
+    return copied_file.get("id")
 
 
     # ✅ Create Apps Script project bound to the Sheet
