@@ -18,10 +18,12 @@ PDF_FOLDER_ID = config["drive_folder_ids"]["pdf"]
 DOC_FOLDER_ID = config["drive_folder_ids"]["doc"]
 CSV_FOLDER_ID = config["drive_folder_ids"]["csv"]
 TEMPLATE_ID   = config["template_sheet_id"]
+SOURCE_APPS_SCRIPT_ID = config.get("apps_script_id")  # ✅ Add this key to config.yaml
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.projects"
 ]
 
 def get_service_credentials():
@@ -50,6 +52,7 @@ def upload_to_google_sheets(df: pd.DataFrame, pdf_filename: str, folder_id: str)
     1) Copy your template sheet into `folder_id`
     2) Write the main DataFrame into the first tab
     3) Write the designer-specific columns into a 'Designer' tab
+    4) Attach Apps Script to the newly created Sheet
     """
     creds = get_service_credentials()
     client = gspread.authorize(creds)
@@ -59,7 +62,9 @@ def upload_to_google_sheets(df: pd.DataFrame, pdf_filename: str, folder_id: str)
 
     sheet_title = pdf_filename.replace(".pdf", "")
     print(f"🛠️ Copying sheet from template as '{sheet_title}'…")
-    sheet_id = google_drive.copy_sheet_from_template(TEMPLATE_ID, sheet_title, folder_id, creds)
+
+    # ✅ Create the new Sheet from template
+    sheet_id = google_drive.copy_sheet_from_template(TEMPLATE_ID, sheet_title, folder_id)
     sheet = client.open_by_key(sheet_id)
     print(f"✅ Created new sheet: {sheet.url}")
 
@@ -90,13 +95,23 @@ def upload_to_google_sheets(df: pd.DataFrame, pdf_filename: str, folder_id: str)
     ws_designer.update(values=[designer_df.columns.tolist()] + designer_df.values.tolist())
     print("✅ Designer sheet synced")
 
+    # ✅ Attach Apps Script to the new Sheet
+    if SOURCE_APPS_SCRIPT_ID:
+        try:
+            google_drive.attach_apps_script_to_sheet(sheet_id, SOURCE_APPS_SCRIPT_ID)
+            print(f"✅ Apps Script successfully attached to: {sheet.url}")
+        except Exception as e:
+            print(f"❌ Failed to attach Apps Script: {e}")
+
+    return sheet_id
+
 def process_pdf():
     """
     1) List all PDFs in your input folder
     2) Download each, extract text+images
     3) Call AI to generate title/description/tags
     4) Build final DataFrame, fill missing columns with "N/A"
-    5) Push to Sheets & marketplace-attribute writer
+    5) Push to Sheets, attach Apps Script & marketplace-attribute writer
     """
     pdf_files = google_drive.list_all_files_in_drive(PDF_FOLDER_ID, "application/pdf")
     if not pdf_files:
@@ -164,14 +179,14 @@ def process_pdf():
         ]
         df = df[column_order]
 
-        # Upload to Sheets
-        upload_to_google_sheets(df, name, PDF_FOLDER_ID)
+        # ✅ Upload to Sheets + attach Apps Script
+        sheet_id = upload_to_google_sheets(df, name, PDF_FOLDER_ID)
 
-        # Write marketplace attributes
+        # ✅ Write marketplace attributes
         creds = get_service_credentials()
         write_marketplace_attribute_sheet(df, name, creds, PDF_FOLDER_ID)
 
-        print(f"✅ Finished processing {name}")
+        print(f"✅ Finished processing {name} → {sheet_id}")
 
 if __name__ == "__main__":
     process_pdf()
