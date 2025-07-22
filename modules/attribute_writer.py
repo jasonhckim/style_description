@@ -52,14 +52,29 @@ def enforce_required_attributes(selected_attrs):
             selected_attrs[key] = [val] * count
     return selected_attrs
 
-def format_attribute_row(style_number, selected_attrs):
-    row = ["" for _ in HEADERS]
-    row[0] = style_number
-    for key, value in selected_attrs.items():
-        col_name = ATTRIBUTE_MAPPING.get(key.lower())
-        if col_name and col_name in HEADERS:
-            idx = HEADERS.index(col_name)
-            row[idx] = ", ".join(value) if isinstance(value, list) else value
+def format_attribute_row(style_no, attributes):
+    row = [""] * TOTAL_COLUMNS  # however you initialize it
+
+    for key, value in attributes.items():
+        idx = ATTRIBUTE_COLUMN_MAP.get(key)
+        if idx is None:
+            continue
+
+        # ✅ Flatten nested lists before joining
+        if isinstance(value, list):
+            # Flatten if nested (e.g., [["Crew Neck", "Basic"]] -> ["Crew Neck", "Basic"])
+            flat = []
+            for v in value:
+                if isinstance(v, list):
+                    flat.extend(v)
+                else:
+                    flat.append(v)
+            row[idx] = ", ".join(map(str, flat))
+        else:
+            row[idx] = str(value) if value is not None else ""
+
+    # Ensure the style number is always in the first column
+    row[0] = style_no
     return row
 
 def map_ai_attributes_to_marketplace(ai_attributes):
