@@ -88,7 +88,7 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
 
     rows = []
     for _, row in df.iterrows():
-        style_no = row["style_number"]
+        style_no = row.get("style_number") or row.get("Style Number")
         ai_attrs = {
             "fabric": row.get("fabric", ""),
             "silhouette": row.get("silhouette", ""),
