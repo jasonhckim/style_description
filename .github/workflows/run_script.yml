@@ -24,6 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade --no-cache-dir -r requirements.txt
           pip install --upgrade --no-cache-dir "openai>=1.13.3,<2.0.0"
+          pip install --upgrade --no-cache-dir google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+          pip install --upgrade --no-cache-dir pyyaml pillow pymupdf
 
       # ✅ Step 4: Debug OpenAI version (IMPORTANT)
       - name: Check OpenAI version
@@ -34,7 +36,7 @@ jobs:
       - name: Create data directory
         run: mkdir -p data
 
-      # ✅ Step 6: Run the script
+      # ✅ Step 6: Run the AI agent (PDF → Sheet + Apps Script Auto-Attach)
       - name: Run main.py on all local PDFs
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -45,3 +47,18 @@ jobs:
             echo "Processing $file"
             python main.py "$file"
           done
+
+      # ✅ Step 7 (Optional Debug): Confirm Google Sheet & Apps Script Created
+      - name: Debug List of Generated Google Sheets
+        if: always()  # Runs even if previous steps fail
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          python - <<EOF
+          from google_drive import list_all_files_in_drive
+          from config import DOC_FOLDER_ID
+          sheets = list_all_files_in_drive(DOC_FOLDER_ID, "application/vnd.google-apps.spreadsheet")
+          print("✅ Sheets generated today:")
+          for s in sheets:
+              print(f"- {s['name']} (https://docs.google.com/spreadsheets/d/{s['id']})")
+          EOF
