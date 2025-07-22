@@ -54,9 +54,11 @@ def upload_to_google_sheets(df: pd.DataFrame, pdf_filename: str, folder_id: str)
     creds = get_service_credentials()
     client = gspread.authorize(creds)
 
+    # ✅ Clean DataFrame to avoid gspread APIError (flatten lists, handle None)
+    df = df.applymap(lambda x: ", ".join(x) if isinstance(x, list) else ("" if x is None else str(x)))
+
     sheet_title = pdf_filename.replace(".pdf", "")
     print(f"🛠️ Copying sheet from template as '{sheet_title}'…")
-    # Assumes your google_drive.copy_sheet_from_template takes (template_id, new_title, folder_id, creds)
     sheet_id = google_drive.copy_sheet_from_template(TEMPLATE_ID, sheet_title, folder_id, creds)
     sheet = client.open_by_key(sheet_id)
     print(f"✅ Created new sheet: {sheet.url}")
