@@ -53,7 +53,8 @@ def enforce_required_attributes(selected_attrs):
     return selected_attrs
 
 def format_attribute_row(style_no, attributes):
-    row = [""] * TOTAL_COLUMNS  # however you initialize it
+    # ✅ Automatically size the row
+    row = [""] * (max(ATTRIBUTE_COLUMN_MAP.values()) + 1)
 
     for key, value in attributes.items():
         idx = ATTRIBUTE_COLUMN_MAP.get(key)
@@ -62,7 +63,6 @@ def format_attribute_row(style_no, attributes):
 
         # ✅ Flatten nested lists before joining
         if isinstance(value, list):
-            # Flatten if nested (e.g., [["Crew Neck", "Basic"]] -> ["Crew Neck", "Basic"])
             flat = []
             for v in value:
                 if isinstance(v, list):
@@ -73,7 +73,7 @@ def format_attribute_row(style_no, attributes):
         else:
             row[idx] = str(value) if value is not None else ""
 
-    # Ensure the style number is always in the first column
+    # ✅ Ensure style number is always set
     row[0] = style_no
     return row
 
