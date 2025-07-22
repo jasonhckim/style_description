@@ -1,4 +1,3 @@
-# modules/attribute_writer.py
 import gspread
 import json
 from modules.utils import get_env_variable
@@ -40,6 +39,11 @@ MANDATORY_KEYS = {
 
 HEADERS = ["Style Number"] + list(ATTRIBUTE_MAPPING.values())
 
+# ✅ Generate a usable column index map from HEADERS
+ATTRIBUTE_COLUMN_MAP = {"style_number": 0}
+ATTRIBUTE_COLUMN_MAP.update({k: i + 1 for i, k in enumerate(ATTRIBUTE_MAPPING.keys())})
+
+
 def enforce_required_attributes(selected_attrs):
     for key, count in MANDATORY_KEYS.items():
         val = selected_attrs.get(key)
@@ -52,9 +56,10 @@ def enforce_required_attributes(selected_attrs):
             selected_attrs[key] = [val] * count
     return selected_attrs
 
+
 def format_attribute_row(style_no, attributes):
-    # ✅ Automatically size the row
-    row = [""] * (max(ATTRIBUTE_COLUMN_MAP.values()) + 1)
+    # ✅ Automatically size the row based on HEADERS
+    row = [""] * len(HEADERS)
 
     for key, value in attributes.items():
         idx = ATTRIBUTE_COLUMN_MAP.get(key)
@@ -77,6 +82,7 @@ def format_attribute_row(style_no, attributes):
     row[0] = style_no
     return row
 
+
 def map_ai_attributes_to_marketplace(ai_attributes):
     mapped = {}
     if ai_attributes.get("neckline"):
@@ -91,6 +97,7 @@ def map_ai_attributes_to_marketplace(ai_attributes):
         mapped["aesthetic"] = [ai_attributes["fabric"]]
     return mapped
 
+
 def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     gc = gspread.authorize(creds)
     title = pdf_filename.replace(".pdf", "").strip()
@@ -98,7 +105,8 @@ def write_marketplace_attribute_sheet(df, pdf_filename, creds, folder_id):
     ws = sh.sheet1
     ws.update_title("faire")
 
-    df.columns = [c.lower() for c in df.columns]
+    # ✅ Normalize column names for consistency
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
     ws.update("A1", [HEADERS])
 
     rows = []
