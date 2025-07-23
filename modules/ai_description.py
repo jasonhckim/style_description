@@ -22,23 +22,32 @@ except KeyError:
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 print("✅ DEBUG: Running NEW ai_description with fallback enabled")
 
-def generate_description(style_number, images, keywords, text, max_retries=3):
-    """Generates product description + attributes using OpenAI with fallback to JSON parsing."""
+# ✅ Safe dictionary to avoid missing placeholders
+class SafeDict(dict):
+    def __missing__(self, key):
+        return ""
+
+def generate_description(style_number, images, keywords, text, product_title="", max_retries=3):
+    """
+    Generates product description + attributes using OpenAI with fallback to JSON parsing.
+    """
     is_set = "SET" in style_number.upper()
     set_text = "This style is a coordinated clothing set." if is_set else ""
     keyword_list = ", ".join(keywords[:3])
 
-    # Safely format the prompt
+    # ✅ Safely format the prompt (no KeyError even if some placeholders missing)
     try:
-        formatted_prompt = generate_description_prompt.format(
+        formatted_prompt = generate_description_prompt.format_map(SafeDict(
             style_number=style_number,
+            title=product_title or "",      # ✅ NEW: include title placeholder
             keywords=keyword_list,
             set_text=set_text,
             extracted_text=text
-        )
-    except KeyError as ke:
-        print(f"❌ Prompt-template formatting error: missing placeholder {ke}")
+        ))
+    except Exception as e:
+        print(f"❌ Prompt-template formatting error: {e}")
         raise
+
     formatted_prompt += f"\nEnsure the keywords ({keyword_list}) are included naturally in the description."
 
     for attempt in range(max_retries):
@@ -98,7 +107,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 tool_choice={"type": "function", "function": {"name": "generate_product_description"}}
             )
 
-            # Handle function-call vs raw-text fallback
+            # ✅ Handle function-call vs raw-text fallback
             tool_calls = getattr(response.choices[0].message, "tool_calls", None)
             if tool_calls:
                 parsed = json.loads(tool_calls[0].function.arguments)
@@ -110,18 +119,18 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
                 safe = match.group(0) if match else raw
                 parsed = json.loads(safe)
 
-            # Clean/truncate
+            # ✅ Clean/truncate description
             desc = parsed.get("description", "").replace("\n", " ").strip()
             if len(desc) > 300:
                 desc = desc[:297].rstrip() + "..."
 
-            # Always supply these five keys
+            # ✅ Always supply these five keys
             attrs = parsed.get("attributes", {})
-            fabric     = attrs.get("fabric",     "N/A")
+            fabric     = attrs.get("fabric", "N/A")
             silhouette = attrs.get("silhouette", "N/A")
-            length     = attrs.get("length",     "N/A")
-            neckline   = attrs.get("neckline",   "N/A")
-            sleeve     = attrs.get("sleeve",     "N/A")
+            length     = attrs.get("length", "N/A")
+            neckline   = attrs.get("neckline", "N/A")
+            sleeve     = attrs.get("sleeve", "N/A")
 
             return {
                 "Style Number":         style_number,
@@ -146,7 +155,7 @@ def generate_description(style_number, images, keywords, text, max_retries=3):
             print(f"❌ ERROR in attempt {attempt+1} for {style_number}: {e}")
             time.sleep(2)
 
-    # on total failure, still return all columns
+    # ✅ On total failure, still return all columns
     return {
         "Style Number":         style_number,
         "Product Title":        "N/A",
