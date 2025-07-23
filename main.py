@@ -136,8 +136,13 @@ def process_pdf():
             try:
                 url = entry["images"][0]["image_url"]
                 res = ai_description.generate_description(
-                    entry["style_number"], [url], keywords, entry["text"]
+                    style_number=entry["style_number"],
+                    images=[url],
+                    keywords=keywords,
+                    text=entry["text"],
+                    product_title=entry.get("title", "")  # ✅ Pass title if extracted, else ""
                 )
+
                 if res["Product Title"] == "N/A":
                     print(f"⚠️ Skipping {entry['style_number']}: AI returned N/A")
                     continue
