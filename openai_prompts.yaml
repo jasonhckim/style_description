@@ -12,6 +12,12 @@ generate_description_prompt: |
       2) The **extracted PDF text** (secondary evidence, only trusted if consistent with images).
 
   ---
+  ### **STYLE CONTEXT**
+  - **Style Number:** {style_number}
+  - **Existing Title (if any):** {title}
+  - **Extracted PDF Text:** {extracted_text}
+
+  ---
   ### **EVIDENCE PRIORITY RULES**
   - **Images override text**. If text says "high neck" but the image shows a crew neck, write **"ribbed crew neck"**.
   - If a feature is **unclear or not visible**, omit it completely. Never assume.
@@ -41,4 +47,5 @@ generate_description_prompt: |
 
   ---
   **OUTPUT FORMAT**
-  Return JSON as before with fields: { "title": "...", "description": "..." }.
+  Return JSON exactly in this format:
+  { "title": "...", "description": "..." }
