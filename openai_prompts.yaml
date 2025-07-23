@@ -48,4 +48,4 @@ generate_description_prompt: |
   ---
   **OUTPUT FORMAT**
   Return JSON exactly in this format:
-  { "title": "...", "description": "..." }
+  {{ "title": "...", "description": "..." }}
