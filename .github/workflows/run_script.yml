@@ -55,9 +55,14 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           python - <<EOF
-          from google_drive import list_all_files_in_drive
-          from config import DOC_FOLDER_ID
-          sheets = list_all_files_in_drive(DOC_FOLDER_ID, "application/vnd.google-apps.spreadsheet")
+          import yaml
+          from modules import google_drive
+          with open("config.yaml", "r") as f:
+              config = yaml.safe_load(f)
+          sheets = google_drive.list_all_files_in_drive(
+              config["drive_folder_ids"]["doc"],
+              "application/vnd.google-apps.spreadsheet"
+          )
           print("✅ Sheets generated today:")
           for s in sheets:
               print(f"- {s['name']} (https://docs.google.com/spreadsheets/d/{s['id']})")
